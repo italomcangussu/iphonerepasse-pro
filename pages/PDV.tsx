@@ -2433,18 +2433,23 @@ const PDV: React.FC = () => {
           </div>
           {step === 3 && (
             <>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Total líquido recebido</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
-              </div>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Acréscimo cartão</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
-              </div>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Total pago pelo cliente</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
-              </div>
+              {/* Antes do primeiro pagamento estas linhas seriam três zeros empurrando as formas de pagamento para baixo. */}
+              {payments.length > 0 && (
+                <>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Total líquido recebido</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
+                </div>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Acréscimo cartão</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
+                </div>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Total pago pelo cliente</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
+                </div>
+                </>
+              )}
 
               {clientOwedAmount > 0 ? (
                 <div className="mt-3 md:mt-5 lg:mt-4 space-y-3">

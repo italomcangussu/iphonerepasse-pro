@@ -78,7 +78,7 @@ Não receberam nota por falta de dado nas capturas: thread da conversa, contrato
 | 1 | Texto abaixo de 12 px | 77 no código (`text-[10px]`, `text-[11px]`), 86 medidos; piores: PDVHistory (17), PDV (15), AdsPage (14), Calculator (7) | `text-xs` (12 px) como piso; rótulo de card em 12 px peso 600 |
 | 2 | Placeholder e borda de campo sem contraste | placeholder `text-gray-400` = 2,6:1 em todo `ios-input`; borda de campo 1,69:1 | placeholder em `--ds-color-text-muted` (#64748b, 4,8:1); borda em tom que dê 3:1 |
 | 3 | Alvos pequenos | 62 falham no WCAG 2.5.8 (caixas de 16×16 na Calculadora, "Mais tarde" de 16 px de altura no aviso de instalar/notificar); 432 abaixo de 44 px (`h-8`) | piso de `min-h-11 min-w-11` nos primitivos de botão-ícone e checkbox |
-| 4 | Campo de valor em `type="number"` | 20 campos; "Valor negociado" mostra `2960.00` em vez de `R$ 2.960,00`; 31 campos sem teclado numérico certo | um `CurrencyInput` com máscara BRL e `inputMode="decimal"` (a Calculadora e o Simulador já têm o desenho certo) |
+| 4 | Campo numérico sem máscara ou teclado | "Valor negociado" da venda mostrava `2960.00` em vez de `R$ 2.960,00`; 16 campos de quantidade e parcelas sem teclado numérico. (Correção desta linha: na primeira versão escrevi "20 campos de valor"; só um era de valor, os demais são quantidades.) | máscara BRL e `inputMode="decimal"` no valor; `inputMode="numeric"` nas quantidades |
 | 5 | Erro cru e validação em toast | 42 `erro-cru` (mensagem técnica do Supabase na tela), 12 validações só em toast | helper único que traduz o erro (o que houve + saída); erro de campo ao lado do campo |
 | 6 | Zoom bloqueado | `index.html:81` `maximum-scale=1, user-scalable=no` (WCAG 1.4.4) + 26 campos < 16 px | tirar o bloqueio e pôr `text-base` nos campos: o zoom ao focar some pelo motivo certo |
 | 7 | Espaçamento fora da escala | 135 valores soltos (`p-[14px]`, `gap-[7px]`); 10 raios distintos | encaixar na escala de 4 px; reduzir para 4 raios |
@@ -163,3 +163,32 @@ Contagem de toques a partir do app aberto no celular.
 6. **Limpeza:** rótulos sobre título, plurais "(s)", "Historico", espaçamentos fora da escala, faixas de rolagem.
 
 Com 1 a 3 feitos, a média estimada passa de 72% para perto de 82%. Para 90%+ é preciso o item 4 e a revisão de erro (causa 5). 100% não é meta realista; 90% é o ponto em que a pessoa só faz a tarefa.
+
+## Depois das correções (2026-11-11, mesma data)
+
+Aplicado na branch `claude/fervent-gauss-xvl2g8`. Suíte: 1.230 testes passando, typecheck e build limpos. Varredura estática: 469 → 385 achados; **P1 de 111 → 32** (os 32 restantes: 15 são do recibo térmico, que fica em 10–11 px de propósito; 10 de campos abaixo de 16 px; o resto é zoom e gesto).
+
+| Tela | Antes | Depois | O que mudou |
+|---|---|---|---|
+| Estoque de Peças | 55% | 80% | cartões no celular; ações de 44 px |
+| CRUD do CRM (8 telas) | 55% | 75% | seletor de canal e etapa, listas de tipo e situação, data local, ajuda por campo, erro ao lado do campo, JSON em "Avançado", título no celular |
+| Calculadora | 45% | 65% | resultado antes de compartilhar; uma cor de destaque; "Configurar taxas" com texto; caixas maiores |
+| Nova venda | 65% | 75% | checklist em uma linha com ícone; valor em reais; linhas zeradas somem; formas de pagamento sobem ~330 px |
+| Estoque | 65% | 75% | primeiro aparelho na primeira dobra; "Compartilhar lista de aparelhos" |
+| Tela de erro | 50% | 70% | texto verdadeiro e "Voltar ao início" |
+| Financeiro | 80% | 85% | saldos antes dos cards de estoque |
+| Agentes IA · Assistente · Canais · Leads · Estatísticas · Ads | 60–75% | 70–80% | botão primário visível no ERP, rótulos em português, título no celular, confirmação do app |
+
+Média das 35 telas: 72% → 75,6%; 14 telas em 80% ou mais; nenhuma abaixo de 60%. As notas "depois" vêm das recapturas das telas alteradas (mesma emulação); as demais telas não foram remedidas.
+
+### O que não foi feito, e por quê
+
+- **Zoom bloqueado (`index.html`)**: `tests/crm-ios-layout-contract.test.ts` exige `user-scalable=no` e `maximum-scale=1`. É decisão do projeto para o chat do CRM no iPhone; mudar pede o sim do dono.
+- **Renomear "Dívidas Ativas" para "Contas a pagar"**: o termo aparece em telas, mensagens, permissões e no assistente financeiro. É vocabulário do negócio, não acabamento.
+- **Passo de pagamento**: as formas de pagamento agora começam no limite da primeira dobra (antes, a mais de uma tela). Para ficarem inteiras acima da dobra é preciso mover o bloco de negociação para depois delas, o que muda a ordem da tarefa; fica como proposta.
+- **Gatilhos de automação**: o banco aceita texto livre e só existe `inbound_message` em uso; o seletor oferece esse e preserva qualquer outro valor já gravado.
+- **Formulários › lead**: continua pedindo o ID do lead; um seletor carregaria a base inteira de leads. Pede busca por nome, que é evolução.
+- **135 espaçamentos fora da escala, 42 mensagens de erro cruas, 18 campos só com placeholder**: são mudanças arquivo a arquivo sem causa única; ficam como próxima rodada.
+- **Login sem "esqueci a senha"**: é funcionalidade nova (fluxo de e-mail), não ajuste de tela.
+- **Texto de 11 px na barra inferior do CRM**: padrão de tab bar do iOS; mantido.
+- **Cabeçalho da tela de erro**: a tela ainda substitui o shell (a árvore do React caiu); ganhou saída, não navegação.

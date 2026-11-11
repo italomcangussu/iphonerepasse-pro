@@ -2058,7 +2058,7 @@ const ConversationsPage: React.FC = () => {
   
                     {/* Attachment previews */}
                     {attachedMedia.length > 0 && (
-                      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                      <div className="mb-3 flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
                         {attachedMedia.map((att) => {
                           const kind = resolveMediaKind(att.file.type, att.file.name) || "document";
                           return (

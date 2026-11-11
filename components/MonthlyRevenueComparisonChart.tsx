@@ -543,7 +543,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
 
           {/* Presets — roláveis no mobile em vez de escondidos (o atalho é o
               caminho feliz; esconder obriga a montar a seleção na mão). */}
-          <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+          <div className="-mx-4 flex items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 sm:mx-0 sm:overflow-visible sm:px-0">
             <button type="button" onClick={handlePresetCurrentVsLast} className={presetButtonClass}>
               Mês vs Anterior
             </button>

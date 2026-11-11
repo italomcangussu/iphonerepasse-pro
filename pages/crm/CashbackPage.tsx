@@ -77,7 +77,7 @@ const CashbackPage: React.FC = () => {
       </div>
 
       <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
           <table className="w-full min-w-[820px]">
             <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
               <tr>

@@ -49,7 +49,7 @@ const RepasseCare: React.FC = () => {
           </div>
         </div>
       </div>
-      <nav role="tablist" aria-label="Seções do Repasse Care+" className="flex gap-1 overflow-x-auto rounded-ios-lg app-surface-soft p-1">
+      <nav role="tablist" aria-label="Seções do Repasse Care+" className="flex gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-ios-lg app-surface-soft p-1">
         {tabs.map((t) => (
           <button
             key={t.key}

@@ -296,7 +296,7 @@ const AudienceTab: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
             <table className="w-full text-left">
               <thead>
                 <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">

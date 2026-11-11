@@ -729,7 +729,7 @@ const OpportunitiesTab: React.FC<{ periodDays: number | null }> = ({ periodDays 
         </ul>
 
         {/* Desktop/tablet: tabela ordenável */}
-        <div className="hidden sm:block overflow-x-auto">
+        <div className="hidden sm:block overflow-x-auto overflow-y-hidden overscroll-x-contain">
           <table className="w-full text-left text-ios-footnote">
             <thead>
               <tr className="text-ios-caption-1 text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 sticky top-0 z-10">

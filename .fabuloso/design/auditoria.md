@@ -1,130 +1,50 @@
 # Auditoria de design — iphonerepasse-pro
 
-> 2026-11-11 13:10 · 185 arquivos · tipo pwa-standalone (web). Heurístico: confira cada item antes de corrigir. P1–P3 é a sugestão do script; P0 (tarefa bloqueada) é julgamento seu. Exceção: `design-ok <id>: motivo`.
+> 2026-11-11 14:07 · 186 arquivos · tipo pwa-standalone (web). Heurístico: confira cada item antes de corrigir. P1–P3 é a sugestão do script; P0 (tarefa bloqueada) é julgamento seu. Exceção: `design-ok <id>: motivo`.
 
 | P | Lei / lente | Onde | Problema | Correção | Regra |
 |---|---|---|---|---|---|
-| P1 | mobile | components/MonthlyRevenueComparisonChart.tsx:546 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
 | P1 | Jakob | components/MonthlyRevenueComparisonChart.tsx:674 | <div> clicável | use <button> (ou <a> para navegação): ganha foco, teclado, leitor de tela e o estado pressionado | `clicavel-sem-botao` |
-| P1 | mobile | components/SaleCompleteEditModal.tsx:543 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | components/SaleCompleteEditModal.tsx:598 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/StockFormModal.tsx:1410 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/StockFormModal.tsx:1423 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/StockFormModal.tsx:1474 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
 | P1 | iOS | components/StockFormModal.tsx:1600 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
 | P1 | iOS | components/StockFormModal.tsx:1607 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
 | P1 | iOS | components/StockFormModal.tsx:1631 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
 | P1 | iOS | components/StockFormModal.tsx:1645 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | legibilidade | components/StockSimulatorModal.tsx:419 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/StockSimulatorModal.tsx:518 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | iOS | components/StockSimulatorModal.tsx:743 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | legibilidade | components/StockSimulatorModal.tsx:759 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/crm/AICommerceStatePanel.tsx:78 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/crm/AICommerceStatePanel.tsx:88 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/crm/AICommerceStatePanel.tsx:95 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/crm/AICommerceStatePanel.tsx:105 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | mobile | components/crm/ConversationsListPanel.tsx:184 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | components/marketing/AudienceTab.tsx:299 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | components/marketing/CampaignsTab.tsx:658 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | components/marketing/CampaignsTab.tsx:684 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
+| P1 | iOS | components/StockSimulatorModal.tsx:744 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
 | P1 | iOS | components/marketing/OpportunitiesTab.tsx:697 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | mobile | components/marketing/OpportunitiesTab.tsx:732 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | components/pwa/PushOptIn.tsx:201 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/pwa/PushOptIn.tsx:225 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | components/pwa/PushOptIn.tsx:238 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
 | P1 | mobile | components/ui/DesktopContextMenu.tsx:37 | arrasto sem tratar pointercancel | `onPointerCancel` e `onLostPointerCapture` com o mesmo fim do `onPointerUp` (soltar, voltar ao lugar): quando o sistema rouba o gesto (rolagem, notificação, voltar), o arrasto fica preso | `gesto-sem-cancelar` |
 | P1 | mobile | components/ui/Modal.tsx:284 | arrasto sem tratar pointercancel | `onPointerCancel` e `onLostPointerCapture` com o mesmo fim do `onPointerUp` (soltar, voltar ao lugar): quando o sistema rouba o gesto (rolagem, notificação, voltar), o arrasto fica preso | `gesto-sem-cancelar` |
-| P1 | mobile | pages/CRMChannels.tsx:710 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
 | P1 | iOS | pages/CRMChannels.tsx:859 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
 | P1 | iOS | pages/CRMChannels.tsx:919 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | legibilidade | pages/CRMLeads.tsx:471 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:530 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:538 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:544 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:591 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:603 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:611 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/CRMLeads.tsx:633 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/Calculator.tsx:476 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/Calculator.tsx:491 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/Calculator.tsx:494 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/Calculator.tsx:505 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/Calculator.tsx:511 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | iOS | pages/Calculator.tsx:546 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | iOS | pages/Calculator.tsx:570 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
-| P1 | mobile | pages/CardFeesSettings.tsx:174 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | pages/PDV.tsx:1321 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1322 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1325 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1335 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1342 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1343 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | iOS | pages/Calculator.tsx:548 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
+| P1 | iOS | pages/Calculator.tsx:572 | campo com fonte menor que 16 px | o iPhone dá zoom ao focar: `text-base` (16 px) no celular, `md:text-sm` se quiser menor no desktop | `campo-zoom-ios` |
+| P1 | legibilidade | pages/PDV.tsx:1323 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1324 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1327 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1337 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1344 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
 | P1 | legibilidade | pages/PDV.tsx:1345 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1348 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1361 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1370 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1380 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1418 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1427 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1443 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDV.tsx:1481 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | mobile | pages/PDVHistory.tsx:901 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | pages/PDVHistory.tsx:944 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:955 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1460 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1461 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1464 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1474 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1481 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1482 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1484 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1487 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1500 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1509 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1519 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1559 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1568 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/PDVHistory.tsx:1583 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1347 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1350 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1363 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1372 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1382 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1420 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1429 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1445 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
+| P1 | legibilidade | pages/PDV.tsx:1483 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
 | P1 | Jakob | pages/PayableDebts.tsx:847 | <div> clicável | use <button> (ou <a> para navegação): ganha foco, teclado, leitor de tela e o estado pressionado | `clicavel-sem-botao` |
-| P1 | mobile | pages/Settings.tsx:806 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | pages/Settings.tsx:842 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | mobile | pages/Settings.tsx:2016 | rolagem de lado sem travar o eixo vertical em <pre> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | pages/care/RepasseCare.tsx:52 | rolagem de lado sem travar o eixo vertical em <nav> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | pages/care/tabs/CareDashboardTab.tsx:94 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:312 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:321 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:332 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:419 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:423 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:427 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:445 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:449 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:453 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:459 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:509 | texto de 9px (text-[9px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:513 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:545 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/AdsPage.tsx:552 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | mobile | pages/crm/CashbackPage.tsx:79 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
-| P1 | mobile | pages/crm/ConversationsPage.tsx:2061 | rolagem de lado sem travar o eixo vertical em <div> | só o eixo x rola: `overflow-x-auto overflow-y-hidden overscroll-x-none` (crie uma utilidade do design system, ex. `rolagem-x`/`faixa-rolavel`, e use só ela); a linha de base das abas é sombra interna, não borda + `-mb-px` | `faixa-solta` |
 | P1 | mobile | pages/crm/ConversationsPage.tsx:1454 | arrasto sem tratar pointercancel | `onPointerCancel` e `onLostPointerCapture` com o mesmo fim do `onPointerUp` (soltar, voltar ao lugar): quando o sistema rouba o gesto (rolagem, notificação, voltar), o arrasto fica preso | `gesto-sem-cancelar` |
-| P1 | legibilidade | pages/crm/SimulatorPage.tsx:535 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/SimulatorPage.tsx:1256 | texto de 11px (text-[11px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | legibilidade | pages/crm/StatisticsPage.tsx:103 | texto de 10px (text-[10px]) | mínimo de 12 px; corpo 16 px no celular (`text-xs` é 12, `text-base` 16) | `texto-pequeno` |
-| P1 | mobile | index.css:212 | overflow-x: auto sem overflow-y: hidden | o y vira auto e a faixa rola para fora da vista no toque: `overflow-y: hidden; overscroll-behavior-x: none` | `faixa-solta` |
-| P1 | mobile | index.css:824 | overflow-x: auto sem overflow-y: hidden | o y vira auto e a faixa rola para fora da vista no toque: `overflow-y: hidden; overscroll-behavior-x: none` | `faixa-solta` |
-| P1 | legibilidade | index.css:2305 | font-size de 11px | mínimo de 12 px | `texto-pequeno` |
+| P1 | legibilidade | index.css:2333 | font-size de 11px | mínimo de 12 px | `texto-pequeno` |
 | P1 | acessibilidade | index.html | zoom bloqueado ou limitado abaixo de 200% no viewport | tire `user-scalable=no`/`maximum-scale` (o zoom ao focar campo se corrige com fonte de 16 px) | `zoom-bloqueado` |
 | P2 | mobile | App.tsx:113 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
 | P2 | mobile | App.tsx:129 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
 | P2 | Norman (recuperação) | components/AddCustomerModal.tsx:71 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | Norman (recuperação) | components/AddSellerModal.tsx:64 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | escala | components/Layout.tsx:424 | valor fora da escala (min-w-[16px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | components/Layout.tsx:592 | valor fora da escala (h-[50px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | components/Layout.tsx:607 | valor fora da escala (h-[50px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:462 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:469 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:612 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Fitts | components/MonthlyRevenueComparisonChart.tsx:643 | alvo de toque de 32 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:665 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:714 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/MonthlyRevenueComparisonChart.tsx:755 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
@@ -143,7 +63,7 @@
 | P2 | escala | components/SaleCompleteEditModal.tsx:717 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Tesler | components/SaleCompleteEditModal.tsx:765 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | escala | components/SaleCompleteEditModal.tsx:825 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | components/SaleCompleteEditModal.tsx:1053 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | components/SaleCompleteEditModal.tsx:1055 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Tesler | components/StockDetailsModal.tsx:704 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | Norman (recuperação) | components/StockFormModal.tsx:542 | mensagem de erro genérica | diga o que houve e o que fazer ("Sem conexão. Suas alterações ficam salvas aqui; tente de novo") e ofereça a saída (tentar de novo, editar, falar com alguém) | `erro-generico` |
 | P2 | Norman (recuperação) | components/StockFormModal.tsx:542 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
@@ -160,9 +80,9 @@
 | P2 | clareza | components/StockFormModal.tsx:1600 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
 | P2 | clareza | components/StockFormModal.tsx:1607 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
 | P2 | clareza | components/StockFormModal.tsx:1645 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
-| P2 | Tesler | components/StockFormModal.tsx:1724 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
-| P2 | Tesler | components/StockFormModal.tsx:1733 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
-| P2 | escala | components/StockFormModal.tsx:1824 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | Tesler | components/StockFormModal.tsx:1725 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | Tesler | components/StockFormModal.tsx:1734 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | escala | components/StockFormModal.tsx:1825 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Tesler | components/StockReservationModal.tsx:350 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | Fitts | components/StockReservationModal.tsx:484 | alvo de toque de 36 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
 | P2 | clareza | components/StockSimulatorModal.tsx:100 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
@@ -170,7 +90,7 @@
 | P2 | Norman (recuperação) | components/TenantSwitcher.tsx:28 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | Norman (recuperação) | components/WhatsAppSendFailure.tsx:69 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | escala | components/WhatsAppSendFailure.tsx:92 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | mobile | components/auth/ProtectedRoute.tsx:21 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
+| P2 | mobile | components/auth/ProtectedRoute.tsx:36 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
 | P2 | mobile | components/auth/PublicOnlyRoute.tsx:11 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
 | P2 | escala | components/care/CareContractModal.tsx:30 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Jakob | components/care/CareContractModal.tsx:54 | prompt() do navegador | diálogo do app (ou ação + desfazer); o nativo do navegador quebra o visual e no PWA mostra o domínio | `dialogo-nativo` |
@@ -180,13 +100,14 @@
 | P2 | escala | components/companies/MemberRow.tsx:26 | valor fora da escala (min-h-[60px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/companies/SharedMembersSection.tsx:51 | valor fora da escala (min-h-[60px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/companies/TransferSection.tsx:44 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:95 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | canal | components/crm/CRMSimpleCrud.tsx:133 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
-| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:177 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:205 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | escala | components/crm/CRMSimpleCrud.tsx:261 | valor fora da escala (min-h-[92px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | cor | components/crm/CRMStandaloneLayout.tsx:353 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
-| P2 | cor | components/crm/CRMStandaloneLayout.tsx:354 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
+| P2 | clareza | components/crm/CRMCrudField.tsx:87 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
+| P2 | escala | components/crm/CRMCrudField.tsx:89 | valor fora da escala (min-h-[92px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | clareza | components/crm/CRMCrudField.tsx:121 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
+| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:160 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:228 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | components/crm/CRMSimpleCrud.tsx:256 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | cor | components/crm/CRMStandaloneLayout.tsx:355 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
+| P2 | cor | components/crm/CRMStandaloneLayout.tsx:356 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
 | P2 | escala | components/crm/ConversationWorkspaceState.tsx:59 | valor fora da escala (h-[68px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/crm/ConversationsListPanel.tsx:373 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/crm/MessageBubble.tsx:740 | valor fora da escala (w-[18rem]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
@@ -200,14 +121,14 @@
 | P2 | Tesler | components/marketing/ScriptsTab.tsx:92 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | clareza | components/marketing/ScriptsTab.tsx:131 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
 | P2 | Tesler | components/motion/AnimatedNumber.tsx:26 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Fitts | components/pwa/InstallPrompt.tsx:113 | alvo de toque de 32 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
 | P2 | Doherty | components/pwa/PermissionRequest.tsx:183 | ação assíncrona sem estado de carregando | desabilite e mostre progresso no próprio botão enquanto espera (toque duplo envia duas vezes) | `async-sem-carregando` |
 | P2 | escala | components/pwa/PushPermissionPrompt.tsx:132 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | components/pwa/PushPermissionPrompt.tsx:139 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Fitts | components/pwa/UpdateBanner.tsx:39 | alvo de toque de 36 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
 | P2 | Tesler | components/reservation/ReservationPaymentFields.tsx:190 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | Fitts | components/reservation/ReservationPaymentFields.tsx:300 | alvo de toque de 36 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
-| P2 | mobile | components/ui/AppErrorBoundary.tsx:37 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
+| P2 | mobile | components/ui/AppErrorBoundary.tsx:43 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
+| P2 | Norman (recuperação) | components/ui/AppErrorBoundary.tsx:50 | mensagem de erro genérica | diga o que houve e o que fazer ("Sem conexão. Suas alterações ficam salvas aqui; tente de novo") e ofereça a saída (tentar de novo, editar, falar com alguém) | `erro-generico` |
 | P2 | escala | components/ui/Banner.tsx:86 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | acessibilidade | components/ui/Combobox.tsx:243 | foco removido sem substituto | `focus-visible:ring-2 focus-visible:ring-offset-2` | `foco-removido` |
 | P2 | Fitts | components/ui/DesktopContextMenu.tsx:64 | alvo de toque de 40 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
@@ -224,58 +145,58 @@
 | P2 | Tesler | pages/CRMChannels.tsx:965 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | Tesler | pages/CRMChannels.tsx:990 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | Tesler | pages/CRMChannels.tsx:1181 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
-| P2 | Norman (recuperação) | pages/CRMLeads.tsx:212 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | pages/CRMLeads.tsx:233 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Tesler | pages/CRMLeads.tsx:410 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
-| P2 | escala | pages/CRMLeads.tsx:452 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/CRMLeads.tsx:459 | valor fora da escala (w-[3px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/CRMLeads.tsx:656 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | clareza | pages/Calculator.tsx:362 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
-| P2 | Fitts | pages/Calculator.tsx:528 | alvo de toque de 40 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
+| P2 | Norman (recuperação) | pages/CRMLeads.tsx:213 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/CRMLeads.tsx:234 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Tesler | pages/CRMLeads.tsx:411 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | escala | pages/CRMLeads.tsx:453 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/CRMLeads.tsx:460 | valor fora da escala (w-[3px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/CRMLeads.tsx:657 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | clareza | pages/Calculator.tsx:363 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
+| P2 | Fitts | pages/Calculator.tsx:530 | alvo de toque de 40 px em <button> | mínimo 44×44 (iOS e web) / 48×48 dp (Android): `min-h-11 min-w-11`, ou área de toque maior que o desenho (`p-2.5` ou pseudo-elemento) | `alvo-pequeno` |
 | P2 | escala | pages/CardFeesSettings.tsx:124 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/CardFeesSettings.tsx:133 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/CardFeesSettings.tsx:142 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/CardFeesSettings.tsx:216 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/CardFeesSettings.tsx:220 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | canal | pages/Clients.tsx:157 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
-| P2 | canal | pages/Clients.tsx:161 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
-| P2 | clareza | pages/Clients.tsx:285 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
-| P2 | Tesler | pages/Clients.tsx:285 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | canal | pages/Clients.tsx:159 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
+| P2 | canal | pages/Clients.tsx:163 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
+| P2 | clareza | pages/Clients.tsx:287 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
+| P2 | Tesler | pages/Clients.tsx:287 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | cor | pages/Dashboard.tsx:138 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
 | P2 | cor | pages/Dashboard.tsx:139 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
 | P2 | Tesler | pages/Dashboard.tsx:217 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
 | P2 | cor | pages/Dashboard.tsx:219 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
 | P2 | clareza | pages/InUse.tsx:115 | campo só com placeholder | rótulo persistente (`<label htmlFor>`): o placeholder some ao digitar e a pessoa esquece o que era (Miller) | `so-placeholder` |
-| P2 | escala | pages/Inventory.tsx:328 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:337 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:345 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:354 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Norman (recuperação) | pages/Inventory.tsx:456 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | pages/Inventory.tsx:558 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | pages/Inventory.tsx:597 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | pages/Inventory.tsx:790 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | cor | pages/Inventory.tsx:1231 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
-| P2 | escala | pages/Inventory.tsx:1327 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:1339 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:1351 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Inventory.tsx:1363 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:329 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:338 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:346 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:355 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | Norman (recuperação) | pages/Inventory.tsx:458 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/Inventory.tsx:560 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/Inventory.tsx:599 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/Inventory.tsx:792 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | cor | pages/Inventory.tsx:1239 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
+| P2 | escala | pages/Inventory.tsx:1335 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:1347 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:1359 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Inventory.tsx:1371 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | canal | pages/Login.tsx:23 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
-| P2 | Tesler | pages/PDV.tsx:1390 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Tesler | pages/PDV.tsx:1655 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | escala | pages/PDV.tsx:1855 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/PDV.tsx:1855 | valor fora da escala (min-h-[2.875rem]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/PDV.tsx:2185 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/PDV.tsx:2228 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | acessibilidade | pages/PDV.tsx:2228 | foco removido sem substituto | `focus-visible:ring-2 focus-visible:ring-offset-2` | `foco-removido` |
-| P2 | Tesler | pages/PDV.tsx:2392 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Tesler | pages/PDV.tsx:2415 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Tesler | pages/PDV.tsx:2598 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Tesler | pages/PDV.tsx:2604 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | escala | pages/PDV.tsx:2707 | valor fora da escala (min-h-[50px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Tesler | pages/PDV.tsx:3067 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Tesler | pages/PDV.tsx:3127 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
-| P2 | Norman (recuperação) | pages/PDVHistory.tsx:386 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Norman (recuperação) | pages/PDVHistory.tsx:432 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Tesler | pages/PDV.tsx:1392 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Tesler | pages/PDV.tsx:1657 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | escala | pages/PDV.tsx:1857 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/PDV.tsx:1857 | valor fora da escala (min-h-[2.875rem]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/PDV.tsx:2187 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/PDV.tsx:2230 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | acessibilidade | pages/PDV.tsx:2230 | foco removido sem substituto | `focus-visible:ring-2 focus-visible:ring-offset-2` | `foco-removido` |
+| P2 | Tesler | pages/PDV.tsx:2390 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Tesler | pages/PDV.tsx:2413 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Tesler | pages/PDV.tsx:2601 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Tesler | pages/PDV.tsx:2607 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | escala | pages/PDV.tsx:2722 | valor fora da escala (min-h-[50px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | Tesler | pages/PDV.tsx:3082 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Tesler | pages/PDV.tsx:3142 | valor em R$ formatado à mão | `new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)` (ou o formatador do projeto): milhar, vírgula e negativo certos | `moeda-a-mao` |
+| P2 | Norman (recuperação) | pages/PDVHistory.tsx:387 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/PDVHistory.tsx:433 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | Norman (recuperação) | pages/PDVQuoteNew.tsx:109 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | Norman (recuperação) | pages/PDVQuotes.tsx:100 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | Norman (recuperação) | pages/PayableDebts.tsx:302 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
@@ -294,20 +215,20 @@
 | P2 | canal | pages/Settings.tsx:419 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
 | P2 | canal | pages/Settings.tsx:512 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
 | P2 | Norman (recuperação) | pages/Settings.tsx:587 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | escala | pages/Settings.tsx:825 | valor fora da escala (min-h-[56px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:884 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:900 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:916 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:936 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:952 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:975 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:988 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:1001 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:1014 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/Settings.tsx:1031 | valor fora da escala (min-h-[56px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Doherty | pages/Settings.tsx:1219 | ação assíncrona sem estado de carregando | desabilite e mostre progresso no próprio botão enquanto espera (toque duplo envia duas vezes) | `async-sem-carregando` |
-| P2 | Norman (recuperação) | pages/Settings.tsx:1238 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Tesler | pages/Settings.tsx:1500 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | escala | pages/Settings.tsx:824 | valor fora da escala (min-h-[56px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:883 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:899 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:915 | valor fora da escala (min-h-[72px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:935 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:951 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:974 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:987 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:1000 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:1013 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/Settings.tsx:1030 | valor fora da escala (min-h-[56px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | Doherty | pages/Settings.tsx:1218 | ação assíncrona sem estado de carregando | desabilite e mostre progresso no próprio botão enquanto espera (toque duplo envia duas vezes) | `async-sem-carregando` |
+| P2 | Norman (recuperação) | pages/Settings.tsx:1237 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Tesler | pages/Settings.tsx:1499 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | canal | pages/Stores.tsx:33 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
 | P2 | Norman (recuperação) | pages/Stores.tsx:47 | mensagem de erro genérica | diga o que houve e o que fazer ("Sem conexão. Suas alterações ficam salvas aqui; tente de novo") e ofereça a saída (tentar de novo, editar, falar com alguém) | `erro-generico` |
 | P2 | Norman (recuperação) | pages/Stores.tsx:47 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
@@ -346,7 +267,7 @@
 | P2 | escala | pages/care/sign/SignParts.tsx:262 | valor fora da escala (min-h-[48px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/care/tabs/CareContractsTab.tsx:45 | valor fora da escala (min-h-[64px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/care/tabs/CareContractsTab.tsx:95 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/care/tabs/CareDashboardTab.tsx:135 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/care/tabs/CareDashboardTab.tsx:136 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Norman (recuperação) | pages/care/tabs/CareServiceRequestsTab.tsx:45 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | escala | pages/care/tabs/CareServiceRequestsTab.tsx:85 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/care/tabs/CareServiceRequestsTab.tsx:102 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
@@ -358,13 +279,12 @@
 | P2 | escala | pages/crm/AISettingsPage.tsx:101 | valor fora da escala (top-[2px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/crm/AISettingsPage.tsx:101 | valor fora da escala (h-[27px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/crm/AISettingsPage.tsx:101 | valor fora da escala (w-[27px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | escala | pages/crm/AISettingsPage.tsx:290 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
+| P2 | escala | pages/crm/AISettingsPage.tsx:293 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Norman (recuperação) | pages/crm/AdminAgentPage.tsx:121 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
-| P2 | Jakob | pages/crm/AdminAgentPage.tsx:145 | confirm() do navegador | diálogo do app (ou ação + desfazer); o nativo do navegador quebra o visual e no PWA mostra o domínio | `dialogo-nativo` |
-| P2 | Tesler | pages/crm/AdminAgentPage.tsx:184 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
+| P2 | Tesler | pages/crm/AdminAgentPage.tsx:190 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | escala | pages/crm/AdsPage.tsx:392 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | escala | pages/crm/AdsPage.tsx:530 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
-| P2 | Norman (recuperação) | pages/crm/CommentsPage.tsx:144 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
+| P2 | Norman (recuperação) | pages/crm/CommentsPage.tsx:145 | mensagem técnica crua na tela (error.message) | traduza por tipo de falha (rede, permissão, validação, servidor) para língua de gente; o detalhe técnico vai para o log | `erro-cru` |
 | P2 | canal | pages/crm/ConversationsPage.tsx:1071 | erro de validação em toast | erro de campo é inline, abaixo do campo; o toast some antes da pessoa corrigir | `validacao-em-toast` |
 | P2 | cor | pages/crm/ConversationsPage.tsx:1749 | cor fora do cardápio | use o token do papel (`bg-primary`, `text-muted-foreground`, `var(--…)`): cor solta não acompanha o modo escuro nem a troca de tema | `cor-solta` |
 | P2 | escala | pages/crm/ConversationsPage.tsx:1983 | valor fora da escala (min-h-[44px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
@@ -411,10 +331,10 @@
 | P2 | escala | pages/pdv/quote/QuoteCustomerCard.tsx:82 | valor fora da escala (min-h-[88px]) | troque pelo degrau mais próximo da escala de espaço (4 8 12 16 24 32 48 64…): `p-4`, `gap-6` | `espaco-fora-escala` |
 | P2 | Tesler | pages/pdv/quote/QuoteItemsCard.tsx:170 | campo numérico sem teclado numérico | `inputMode="numeric"` (ou `tel`) e máscara que aceita qualquer formato (Postel) | `teclado-numerico` |
 | P2 | mobile | screenshots/main.tsx:15 | 100vh / h-screen | no celular a barra do navegador muda a altura: `min-h-dvh` / `100dvh` | `altura-vh` |
-| P2 | acessibilidade | index.css:260 | outline removido | dê um estilo de :focus-visible | `foco-removido` |
-| P2 | acessibilidade | index.css:378 | outline removido | dê um estilo de :focus-visible | `foco-removido` |
-| P2 | reflexo | index.css:1054 | texto em gradiente | ênfase vem de peso e tamanho, na cor de texto do cardápio | `texto-gradiente` |
-| P2 | reflexo | index.css:1055 | texto em gradiente | ênfase vem de peso e tamanho, na cor de texto do cardápio | `texto-gradiente` |
+| P2 | acessibilidade | index.css:264 | outline removido | dê um estilo de :focus-visible | `foco-removido` |
+| P2 | acessibilidade | index.css:382 | outline removido | dê um estilo de :focus-visible | `foco-removido` |
+| P2 | reflexo | index.css:1059 | texto em gradiente | ênfase vem de peso e tamanho, na cor de texto do cardápio | `texto-gradiente` |
+| P2 | reflexo | index.css:1060 | texto em gradiente | ênfase vem de peso e tamanho, na cor de texto do cardápio | `texto-gradiente` |
 | P3 | Doherty | components/BrandLogo.tsx:49 | <img> sem width/height nem aspect | dê `width`/`height` (ou `aspect-[4/3]`): sem eles a página pula quando a imagem chega (CLS) | `img-sem-dimensao` |
 | P3 | movimento | components/Layout.tsx:358 | transição de propriedade de layout | anime `transform`/`opacity` (ou `grid-template-rows` para abrir/fechar): largura e altura recalculam a página a cada quadro | `transicao-de-layout` |
 | P3 | clareza | components/SaleCompleteEditModal.tsx:659 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
@@ -434,23 +354,20 @@
 | P3 | escala | components/ui/ConfirmDialog.tsx:82 | tamanho de texto fora da escala (text-[17px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | escala | components/ui/Modal.tsx:297 | tamanho de texto fora da escala (text-[20px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | escala | pages/CRMChannels.tsx:665 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
-| P3 | clareza | pages/CRMLeads.tsx:607 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
-| P3 | clareza | pages/CRMLeads.tsx:615 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
+| P3 | clareza | pages/CRMLeads.tsx:608 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
+| P3 | clareza | pages/CRMLeads.tsx:616 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | escala | pages/CardFeesSettings.tsx:105 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | escala | pages/Companies.tsx:78 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
-| P3 | reflexo | pages/Inventory.tsx:1041 | brilho colorido (halo sem deslocamento) | profundidade é sombra com deslocamento para baixo, em preto transparente; o halo colorido é enfeite | `brilho-colorido` |
-| P3 | reflexo | pages/Marketing.tsx:28 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
-| P3 | escala | pages/PDV.tsx:1320 | tamanho de texto fora da escala (text-[14px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
-| P3 | escala | pages/PDV.tsx:1404 | tamanho de texto fora da escala (text-[13px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
-| P3 | reflexo | pages/PDVHistory.tsx:495 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
+| P3 | reflexo | pages/Inventory.tsx:1049 | brilho colorido (halo sem deslocamento) | profundidade é sombra com deslocamento para baixo, em preto transparente; o halo colorido é enfeite | `brilho-colorido` |
+| P3 | escala | pages/PDV.tsx:1322 | tamanho de texto fora da escala (text-[14px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
+| P3 | escala | pages/PDV.tsx:1406 | tamanho de texto fora da escala (text-[13px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
+| P3 | clareza | pages/PDV.tsx:2268 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | clareza | pages/PDVHistory.tsx:842 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | clareza | pages/PDVHistory.tsx:1261 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | clareza | pages/PDVHistory.tsx:1287 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | escala | pages/PDVHistory.tsx:1459 | tamanho de texto fora da escala (text-[14px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | escala | pages/PDVHistory.tsx:1533 | tamanho de texto fora da escala (text-[13px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
-| P3 | reflexo | pages/PDVQuoteNew.tsx:122 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
-| P3 | reflexo | pages/PDVQuotes.tsx:112 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
-| P3 | escala | pages/PartsStock.tsx:100 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
+| P3 | escala | pages/PartsStock.tsx:127 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | escala | pages/PayableDebts.tsx:387 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
 | P3 | Doherty | pages/PayableDebts.tsx:926 | <img> sem width/height nem aspect | dê `width`/`height` (ou `aspect-[4/3]`): sem eles a página pula quando a imagem chega (CLS) | `img-sem-dimensao` |
 | P3 | escala | pages/Sellers.tsx:136 | tamanho de texto fora da escala (text-[28px]) | use um degrau da escala de texto do projeto | `texto-fora-escala` |
@@ -460,16 +377,15 @@
 | P3 | clareza | pages/care/contract/SignatureSection.tsx:119 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | reflexo | pages/care/sign/SignParts.tsx:79 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
 | P3 | Postel | pages/care/sign/SignParts.tsx:227 | formato rígido no campo (pattern) | aceite o formato livre e normalize no código | `pattern-rigido` |
-| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:42 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
-| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:52 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
-| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:60 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
+| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:43 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
+| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:53 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:61 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
+| P3 | clareza | pages/care/tabs/CareDashboardTab.tsx:62 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | clareza | pages/care/tabs/CareServiceRequestsTab.tsx:29 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | reflexo | pages/crm/AdsPage.tsx:513 | rótulo em caixa alta em cima do título | tire o rótulo e deixe o título falar; se a seção precisa de contexto, ele vai no próprio título ou na migalha | `rotulo-sobre-titulo` |
-| P3 | clareza | pages/crm/CashbackPage.tsx:65 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
 | P3 | Doherty | pages/crm/ConversationsPage.tsx:192 | <img> sem width/height nem aspect | dê `width`/`height` (ou `aspect-[4/3]`): sem eles a página pula quando a imagem chega (CLS) | `img-sem-dimensao` |
 | P3 | clareza | services/dataContext.tsx:651 | plural à mão | `Intl.PluralRules` ou a função de plural da i18n do projeto ("1 item", "2 itens": o "(s)" faz pensar) | `plural-a-mao` |
-| P3 | acessibilidade | index.css:1237 | "reduzir movimento" zera todas as durações | reduza o movimento, não o retorno: troque deslocamento e escala por opacidade curta (150 ms); estados continuam visíveis | `reduzir-movimento-zera-tudo` |
-| P3 | acessibilidade | index.css:1239 | "reduzir movimento" zera todas as durações | reduza o movimento, não o retorno: troque deslocamento e escala por opacidade curta (150 ms); estados continuam visíveis | `reduzir-movimento-zera-tudo` |
-| P3 | movimento | index.css:2215 | transição de propriedade de layout | anime transform/opacity | `transicao-de-layout` |
+| P3 | acessibilidade | index.css:1242 | "reduzir movimento" zera todas as durações | reduza o movimento, não o retorno: troque deslocamento e escala por opacidade curta (150 ms); estados continuam visíveis | `reduzir-movimento-zera-tudo` |
+| P3 | acessibilidade | index.css:1244 | "reduzir movimento" zera todas as durações | reduza o movimento, não o retorno: troque deslocamento e escala por opacidade curta (150 ms); estados continuam visíveis | `reduzir-movimento-zera-tudo` |
+| P3 | movimento | index.css:2243 | transição de propriedade de layout | anime transform/opacity | `transicao-de-layout` |
 | P3 | Similaridade | projeto | 6 raios de borda diferentes (rounded, rounded-lg, rounded-md, rounded-2xl, rounded-xl, rounded-3xl) | uma personalidade de raio (2 ou 3 degraus no máximo) | `raios-demais` |

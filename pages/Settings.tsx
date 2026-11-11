@@ -802,7 +802,7 @@ const Settings: React.FC = () => {
             <p className="mt-1 truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">{user?.email}</p>
           </div>
 
-          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
+          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto overflow-y-hidden overscroll-x-contain md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
             {SETTINGS_GROUPS.map((group) => {
               const groupItems = tabs.filter((tab) => tab.group === group);
               if (groupItems.length === 0) return null;
@@ -2012,7 +2012,7 @@ const Settings: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{entry.action}</p>
                     {entry.screen ? <p className="text-xs text-gray-500 mt-1">Tela: {entry.screen}</p> : null}
                     {entry.metadata && Object.keys(entry.metadata).length > 0 ? (
-                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto overscroll-x-contain touch-pan-x max-w-full text-gray-600 dark:text-surface-dark-600">
+                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full text-gray-600 dark:text-surface-dark-600">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     ) : null}

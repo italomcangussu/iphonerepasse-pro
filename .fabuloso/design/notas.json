@@ -21,6 +21,12 @@
       "nota": 6.5,
       "de": 10,
       "pct": 65
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "erp/estoque-cadastro-aparelho": [
@@ -37,6 +43,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "erp/pdv-nova-venda": [
@@ -45,6 +57,12 @@
       "nota": 6.5,
       "de": 10,
       "pct": 65
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "erp/pdv-orcamentos": [
@@ -69,6 +87,12 @@
       "nota": 8,
       "de": 10,
       "pct": 80
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
     }
   ],
   "erp/clientes": [
@@ -85,6 +109,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "erp/dividas-ativas": [
@@ -101,6 +131,12 @@
       "nota": 5.5,
       "de": 10,
       "pct": 55
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
     }
   ],
   "erp/calculadora": [
@@ -109,6 +145,12 @@
       "nota": 4.5,
       "de": 10,
       "pct": 45
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
     }
   ],
   "erp/garantias": [
@@ -181,6 +223,12 @@
       "nota": 7.5,
       "de": 10,
       "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
     }
   ],
   "erp/editar-taxas": [
@@ -197,6 +245,12 @@
       "nota": 5,
       "de": 10,
       "pct": 50
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
     }
   ],
   "crm/conversas-lista": [
@@ -213,6 +267,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "crm/simulador": [
@@ -229,6 +289,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "crm/ads": [
@@ -237,6 +303,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "crm/agentes-ia": [
@@ -245,6 +317,12 @@
       "nota": 6,
       "de": 10,
       "pct": 60
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
     }
   ],
   "crm/crud-generico": [
@@ -253,6 +331,12 @@
       "nota": 5.5,
       "de": 10,
       "pct": 55
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "crm/assistente-financeiro": [
@@ -261,6 +345,12 @@
       "nota": 7.5,
       "de": 10,
       "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
     }
   ],
   "crm/canais": [
@@ -269,6 +359,12 @@
       "nota": 7,
       "de": 10,
       "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
     }
   ],
   "crm/configuracoes": [

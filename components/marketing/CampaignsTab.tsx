@@ -655,7 +655,7 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Últimos broadcasts */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
                 <p className="text-ios-caption-1 text-gray-500 dark:text-surface-dark-500 mb-1">Últimos disparos</p>
                 <table className="w-full text-left text-ios-footnote">
                   <thead>
@@ -681,7 +681,7 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
               </div>
 
               {/* Atribuição de origem */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
                 <p className="text-ios-caption-1 text-gray-500 dark:text-surface-dark-500 mb-1">De onde vêm os leads</p>
                 {broadcastStats.sources.length === 0 ? (
                   <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">Sem origem identificada nos leads do período.</p>

@@ -213,6 +213,7 @@
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -825,6 +826,7 @@
       display: flex;
       gap: 0.5rem;
       overflow-x: auto;
+      overflow-y: hidden;
       overscroll-behavior-x: contain;
       scrollbar-width: none;
       padding-bottom: 0.05rem;

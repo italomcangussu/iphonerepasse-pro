@@ -171,7 +171,7 @@ const CardFeesSettings: React.FC = () => {
             </span>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
+          <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
             <table className="w-full min-w-[520px]">
               <thead className="bg-gray-50 dark:bg-surface-dark-200">
                 <tr>

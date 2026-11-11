@@ -707,7 +707,7 @@ const CRMChannels: React.FC = () => {
       </div>
 
       <div className="ios-card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
           <table className="w-full min-w-[980px]">
             <thead className="bg-gray-50 dark:bg-surface-dark-200/60 border-b border-gray-200 dark:border-surface-dark-300">
               <tr className="text-left text-xs uppercase tracking-wide text-gray-500">

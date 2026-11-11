@@ -181,7 +181,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
       )}
 
       {isMobileViewport ? (
-        <div className="flex max-w-full flex-nowrap gap-1.5 overflow-x-auto pb-1 pr-1">
+        <div className="flex max-w-full flex-nowrap gap-1.5 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pr-1">
           <button
             type="button"
             onClick={clearConversationFilters}

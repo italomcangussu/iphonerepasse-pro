@@ -92,7 +92,7 @@ const ByModel: React.FC<{ d: CareDashboard }> = ({ d }) => (
     {d.byModel.length === 0 ? (
       <p className="p-4 text-sm app-text-muted">Nenhum contrato ainda.</p>
     ) : (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
         <table className="mt-2 w-full text-sm">
           <thead className="app-table-head">
             <tr className="text-left text-xs uppercase tracking-wide app-text-muted">
