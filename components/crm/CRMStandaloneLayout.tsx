@@ -102,6 +102,8 @@ const CRMStandaloneLayout: React.FC = () => {
   const activePath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
   const getItemPath = (id: string) => (id === "conversations" ? "/" : `/${id}`);
   const isConversationRoute = activePath === "/" || activePath.startsWith("/conversations/");
+  // Conversas e Configurações já têm título próprio; nas demais o celular ficava sem dizer que tela é.
+  const showMobilePageTitle = isMobileViewport && !isConversationRoute && !activePath.startsWith("/settings");
   const activePageTitle = useMemo(() => {
     const activeItem = visibleItems.find((item) => {
       const itemPath = getItemPath(item.id);
@@ -458,8 +460,7 @@ const CRMStandaloneLayout: React.FC = () => {
                 </button>
 
                 <div className="crm-layout-page-title">
-                  <p className="crm-layout-page-kicker">CRM Plus</p>
-                  <p className="crm-layout-page-name">{activePageTitle}</p>
+                  <h1 className="crm-layout-page-name">{activePageTitle}</h1>
                 </div>
               </div>
 
@@ -468,6 +469,7 @@ const CRMStandaloneLayout: React.FC = () => {
           )}
 
           <div className="crm-main-content">
+            {showMobilePageTitle && <h1 className="crm-mobile-page-title">{activePageTitle}</h1>}
             <Outlet />
           </div>
         </main>
@@ -521,10 +523,7 @@ const CRMStandaloneLayout: React.FC = () => {
             <section className="crm-mobile-more-sheet" role="dialog" aria-modal="true" aria-label="Mais páginas do CRM">
               <div className="crm-mobile-more-handle" aria-hidden="true" />
               <div className="crm-mobile-more-header">
-                <div>
-                  <p className="crm-layout-page-kicker">CRM Plus</p>
-                  <h2>Mais páginas</h2>
-                </div>
+                <h2>Mais páginas</h2>
                 <button type="button" className="crm-icon-btn" onClick={() => setIsMoreOpen(false)} aria-label="Fechar">
                   <X size={16} />
                 </button>

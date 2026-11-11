@@ -8,12 +8,12 @@ const FormsPage: React.FC = () => {
       title="Formulários"
       description="Links públicos para captura e enriquecimento de dados de leads."
       fields={[
-        { key: "lead_id", label: "Lead ID", required: true },
-        { key: "token", label: "Token", required: true },
-        { key: "slug", label: "Slug", required: true },
-        { key: "utm_source", label: "UTM Source" },
-        { key: "utm_campaign", label: "UTM Campaign" },
-        { key: "expires_at", label: "Expira em (ISO UTC)" },
+        { key: "lead_id", label: "Lead (ID)", required: true, hint: "Identificador do lead que vai receber o link." },
+        { key: "token", label: "Código do link", required: true, hint: "Código único que identifica este link." },
+        { key: "slug", label: "Final do endereço", required: true, hint: "Sem espaços. Ex.: cadastro-joao" },
+        { key: "utm_source", label: "Origem (UTM source)" },
+        { key: "utm_campaign", label: "Campanha (UTM campaign)" },
+        { key: "expires_at", label: "Expira em", type: "datetime", hint: "No seu horário local. Vazio não expira." },
         { key: "is_active", label: "Ativo", type: "boolean" },
       ]}
       columns={[

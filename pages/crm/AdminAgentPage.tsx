@@ -142,7 +142,13 @@ const AdminAgentPage: React.FC = () => {
   };
 
   const removeNumber = async (row: AdminNumberRow) => {
-    if (!confirm(`Remover ${row.label || row.phone} da lista de administradores?`)) return;
+    const confirmed = await toast.confirm({
+      title: "Remover número",
+      description: `${row.label || row.phone} deixa de poder operar o assistente financeiro.`,
+      confirmLabel: "Remover",
+      variant: "danger",
+    });
+    if (!confirmed) return;
     await run(async () => {
       assertNoError(await supabase.from("admin_agent_numbers").delete().eq("id", row.id));
       toast.success("Número removido.");

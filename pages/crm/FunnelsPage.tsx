@@ -11,10 +11,10 @@ const FunnelsPage: React.FC = () => {
         fields={[
           { key: "name", label: "Nome", required: true },
           { key: "description", label: "Descrição", type: "textarea" },
-          { key: "funnel_type", label: "Tipo", required: true },
-          { key: "is_default", label: "Padrão", type: "boolean" },
+          { key: "funnel_type", label: "Tipo", required: true, type: "select", options: [{ value: "sales", label: "Vendas" }, { value: "post_sale", label: "Pós-venda" }] },
+          { key: "is_default", label: "Funil padrão", type: "boolean", hint: "Novos leads deste tipo entram neste funil." },
           { key: "is_active", label: "Ativo", type: "boolean" },
-          { key: "stages", label: "Stages (JSON)", type: "json" },
+          { key: "stages", label: "Etapas próprias (JSON)", type: "json", hint: "Deixe vazio para usar as Etapas Globais abaixo." },
         ]}
         columns={[
           { key: "name", label: "Nome" },
@@ -39,13 +39,13 @@ const FunnelsPage: React.FC = () => {
         title="Etapas Globais"
         description="Etapas padrão de funil utilizadas no CRM Plus."
         fields={[
-          { key: "id", label: "ID", required: true },
+          { key: "id", label: "Identificador", required: true, hint: "Sem espaços nem acentos. Ex.: negociacao" },
           { key: "name", label: "Nome", required: true },
-          { key: "funnel_type", label: "Tipo", required: true },
-          { key: "color", label: "Cor", required: true },
+          { key: "funnel_type", label: "Tipo", required: true, type: "select", options: [{ value: "sales", label: "Vendas" }, { value: "post_sale", label: "Pós-venda" }] },
+          { key: "color", label: "Cor", required: true, hint: "Código da cor. Ex.: #2563eb" },
           { key: "order", label: "Ordem", type: "number" },
-          { key: "is_won", label: "Ganho", type: "boolean" },
-          { key: "is_lost", label: "Perdido", type: "boolean" },
+          { key: "is_won", label: "Etapa de venda ganha", type: "boolean" },
+          { key: "is_lost", label: "Etapa de venda perdida", type: "boolean" },
           { key: "is_active", label: "Ativo", type: "boolean" },
         ]}
         columns={[

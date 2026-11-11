@@ -8,20 +8,20 @@ const AutomationsPage: React.FC = () => {
       title="Automações"
       description="Configuração de regras automáticas por trigger, canal e funil."
       fields={[
-        { key: "description", label: "Descrição", required: true },
-        { key: "trigger_type", label: "Trigger", required: true },
-        { key: "message_content", label: "Mensagem", type: "textarea", required: true },
-        { key: "delay_minutes", label: "Delay (min)", type: "number" },
-        { key: "channel_id", label: "Canal (UUID)" },
-        { key: "funnel_stage", label: "Etapa" },
-        { key: "switch_to_human_handling", label: "Handoff humano", type: "boolean" },
-        { key: "is_active", label: "Ativo", type: "boolean" },
-        { key: "message_variants", label: "Variações (JSON)", type: "json" },
+        { key: "description", label: "Nome da automação", required: true, placeholder: "Ex.: Boas-vindas fora do horário" },
+        { key: "trigger_type", label: "Quando disparar", required: true, type: "select", options: [{ value: "inbound_message", label: "Quando o cliente envia mensagem" }] },
+        { key: "message_content", label: "Mensagem enviada", type: "textarea", required: true },
+        { key: "delay_minutes", label: "Esperar (minutos)", type: "number", hint: "0 envia na hora." },
+        { key: "channel_id", label: "Canal", type: "lookup", lookup: { table: "crm_channels", valueKey: "id", labelKey: "name", storeScoped: true, emptyLabel: "Todos os canais" } },
+        { key: "funnel_stage", label: "Etapa do funil", type: "lookup", lookup: { table: "crm_funnel_stages", valueKey: "id", labelKey: "name", emptyLabel: "Qualquer etapa" } },
+        { key: "switch_to_human_handling", label: "Passar para atendente", type: "boolean", hint: "Depois de enviar, a conversa sai da IA e vai para um humano." },
+        { key: "is_active", label: "Automação ligada", type: "boolean" },
+        { key: "message_variants", label: "Variações da mensagem (JSON)", type: "json", hint: "Textos alternativos para não repetir a mesma mensagem." },
       ]}
       columns={[
-        { key: "description", label: "Descrição" },
-        { key: "trigger_type", label: "Trigger" },
-        { key: "delay_minutes", label: "Delay" },
+        { key: "description", label: "Automação" },
+        { key: "trigger_type", label: "Disparo" },
+        { key: "delay_minutes", label: "Espera (min)" },
         { key: "funnel_stage", label: "Etapa" },
         { key: "is_active", label: "Ativo", render: (row) => (row.is_active ? "Sim" : "Não") },
       ]}

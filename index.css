@@ -1592,8 +1592,16 @@
     color: var(--crm-muted);
   }
 
+  .crm-mobile-page-title {
+    margin: 0.25rem 0 0.75rem;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--crm-text);
+  }
+
   .crm-layout-page-name {
-    margin-top: 0.15rem;
+    margin-top: 0;
     font-size: 1.12rem;
     font-weight: 800;
     line-height: 1.1;

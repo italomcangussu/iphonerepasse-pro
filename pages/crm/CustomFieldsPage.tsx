@@ -8,12 +8,12 @@ const CustomFieldsPage: React.FC = () => {
       title="Campos Personalizados"
       description="Campos dinâmicos para enriquecimento de lead no CRM."
       fields={[
-        { key: "key", label: "Chave", required: true },
-        { key: "label", label: "Rótulo", required: true },
-        { key: "field_type", label: "Tipo", required: true },
+        { key: "key", label: "Identificador", required: true, hint: "Sem espaços nem acentos. Ex.: cidade_origem" },
+        { key: "label", label: "Nome exibido", required: true },
+        { key: "field_type", label: "Tipo", required: true, type: "select", options: [{ value: "text", label: "Texto" }, { value: "number", label: "Número" }, { value: "boolean", label: "Sim ou não" }, { value: "date", label: "Data" }, { value: "select", label: "Lista de opções" }, { value: "json", label: "JSON" }] },
         { key: "is_required", label: "Obrigatório", type: "boolean" },
         { key: "is_active", label: "Ativo", type: "boolean" },
-        { key: "options", label: "Opções (JSON)", type: "json" },
+        { key: "options", label: "Opções da lista (JSON)", type: "json", hint: "Só para o tipo Lista de opções. Ex.: [\"Fortaleza\", \"Sobral\"]" },
       ]}
       columns={[
         { key: "key", label: "Chave" },

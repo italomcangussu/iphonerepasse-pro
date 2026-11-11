@@ -10,9 +10,9 @@ const TemplatesPage: React.FC = () => {
       fields={[
         { key: "name", label: "Nome", required: true },
         { key: "content", label: "Conteúdo", type: "textarea", required: true },
-        { key: "channel_id", label: "Canal (UUID)" },
+        { key: "channel_id", label: "Canal", type: "lookup", lookup: { table: "crm_channels", valueKey: "id", labelKey: "name", storeScoped: true, emptyLabel: "Todos os canais" } },
         { key: "category", label: "Categoria" },
-        { key: "variables", label: "Variáveis (JSON)", type: "json" },
+        { key: "variables", label: "Variáveis (JSON)", type: "json", hint: "Campos que o texto substitui, como nome do cliente." },
         { key: "is_active", label: "Ativo", type: "boolean" },
       ]}
       columns={[

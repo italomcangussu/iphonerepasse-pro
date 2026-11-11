@@ -703,10 +703,10 @@ const SettingsPage: React.FC = () => {
           title="Configuração UTM"
           description="Mapeamento de campanhas e tags para atribuição de origem."
           fields={[
-            { key: "source_key", label: "Source", required: true },
-            { key: "campaign_key", label: "Campaign", required: true },
-            { key: "medium_key", label: "Medium" },
-            { key: "default_channel_id", label: "Canal padrão (UUID)" },
+            { key: "source_key", label: "Origem (utm_source)", required: true },
+            { key: "campaign_key", label: "Campanha (utm_campaign)", required: true },
+            { key: "medium_key", label: "Mídia (utm_medium)" },
+            { key: "default_channel_id", label: "Canal padrão", type: "lookup", lookup: { table: "crm_channels", valueKey: "id", labelKey: "name", storeScoped: true, emptyLabel: "Nenhum canal padrão" } },
             { key: "is_active", label: "Ativo", type: "boolean" },
           ]}
           columns={[

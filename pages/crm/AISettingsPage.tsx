@@ -273,20 +273,23 @@ const AISettingsPage: React.FC = () => {
                 <input className="crm-input" value={draft.name} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} />
               </label>
               <label className="block">
-                <span className="crm-field-label">Modelo</span>
+                <span className="crm-field-label">Modelo de IA</span>
                 <input className="crm-input" value={draft.model} onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))} />
               </label>
             </div>
             <label className="mt-4 block">
-              <span className="crm-field-label">System prompt</span>
+              <span className="crm-field-label">Instruções do agente</span>
+              <span className="mb-1 block text-xs text-slate-600 dark:text-slate-400">Como o agente deve falar e o que ele pode ou não fazer.</span>
               <textarea className="crm-input min-h-28" value={draft.system_prompt || ''} onChange={(event) => setDraft((prev) => ({ ...prev, system_prompt: event.target.value }))} />
             </label>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="crm-field-label mt-4">O que o agente faz</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="O que o agente faz">
               {BEHAVIOR_MODES.map((mode) => (
                 <button
                   key={mode.value}
                   type="button"
+                  aria-pressed={Boolean(draft.behavior_modes?.includes(mode.value))}
                   className={`min-h-[44px] px-4 rounded-full text-xs font-semibold transition-colors ${draft.behavior_modes?.includes(mode.value) ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                   onClick={() => toggleBehaviorMode(mode.value)}
                 >

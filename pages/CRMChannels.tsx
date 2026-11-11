@@ -45,7 +45,7 @@ const getWebhookUrl = (channelId: string, webhookSecret?: string | null): string
 };
 
 const PROVIDER_OPTIONS: Array<{ value: CRMProvider; label: string }> = [
-  { value: 'uazapi', label: 'UAZAPI' },
+  { value: 'uazapi', label: 'WhatsApp (UAZAPI)' },
   { value: 'instagram_official', label: 'Instagram Oficial' },
 ];
 
@@ -504,7 +504,7 @@ const CRMChannels: React.FC = () => {
     }
 
     if (!PROVIDER_OPTIONS.some((provider) => provider.value === formData.provider)) {
-      toast.error('Provider inválido. Permitidos: UAZAPI e Instagram Oficial.');
+      toast.error('Tipo de canal inválido. Escolha WhatsApp (UAZAPI) ou Instagram Oficial.');
       return;
     }
 
@@ -664,7 +664,7 @@ const CRMChannels: React.FC = () => {
         <div>
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">CRM Canais</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">
-            Configuração de canais CRM Plus (somente UAZAPI e Instagram Oficial).
+            Números de WhatsApp e contas de Instagram que atendem no CRM Plus.
           </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
@@ -683,7 +683,7 @@ const CRMChannels: React.FC = () => {
         <div>
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">Padrão da loja para novos leads</h3>
           <p className="text-sm text-gray-500 dark:text-surface-dark-500">
-            Canais em modo herdado seguem este destino quando uma nova mensagem do cliente chega.
+            Quem responde primeiro quando chega mensagem nova. Vale para os canais que não têm escolha própria.
           </p>
         </div>
         <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-surface-dark-300 dark:bg-surface-dark-200">
@@ -712,7 +712,7 @@ const CRMChannels: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-surface-dark-200/60 border-b border-gray-200 dark:border-surface-dark-300">
               <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-3">Canal</th>
-                <th className="px-4 py-3">Provider</th>
+                <th className="px-4 py-3">Tipo</th>
                 <th className="px-4 py-3">Roteamento</th>
                 <th className="px-4 py-3">Funil Inbound</th>
                 <th className="px-4 py-3">Status</th>
@@ -805,7 +805,7 @@ const CRMChannels: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="ios-label">Provider</label>
+              <label className="ios-label">Tipo de canal</label>
               <select
                 className="ios-input"
                 value={formData.provider}

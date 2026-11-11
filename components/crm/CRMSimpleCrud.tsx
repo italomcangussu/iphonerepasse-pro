@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { assertNoError } from "../../utils/supabase";
@@ -6,17 +6,9 @@ import DesktopContextMenuHost from "../ui/DesktopContextMenu";
 import type { ContextMenuAction } from "../ui/contextMenuCore";
 import { useToast } from "../ui/ToastProvider";
 import { useDesktopContextMenu } from "../../hooks/useDesktopContextMenu";
+import CRMCrudField, { type CrudField, type CrudOption } from "./CRMCrudField";
 import CRMPageFrame from "./CRMPageFrame";
 import { useCRMStore } from "./useCRMStore";
-
-type FieldType = "text" | "textarea" | "number" | "boolean" | "json";
-
-type CrudField = {
-  key: string;
-  label: string;
-  type?: FieldType;
-  required?: boolean;
-};
 
 type CrudColumn = {
   key: string;
@@ -36,13 +28,39 @@ type CRMSimpleCrudProps = {
   storeColumn?: string;
 };
 
-function parseJsonSafe(value: string): any {
-  if (!value.trim()) return null;
+type FieldErrors = Record<string, string>;
+
+/** Texto vazio vira objeto vazio; JSON inválido devolve `undefined` para o formulário acusar em vez de gravar `{}` por cima do dado. */
+function parseJsonField(value: unknown): unknown {
+  if (typeof value !== "string") return value ?? {};
+  if (!value.trim()) return {};
   try {
-    return JSON.parse(value);
+    return JSON.parse(value) ?? {};
   } catch {
-    return null;
+    return undefined;
   }
+}
+
+function validateFields(fields: CrudField[], form: Record<string, any>): FieldErrors {
+  const errors: FieldErrors = {};
+  for (const field of fields) {
+    if (field.required && !String(form[field.key] ?? "").trim()) {
+      errors[field.key] = `Preencha ${field.label.toLowerCase()}.`;
+      continue;
+    }
+    if (field.type === "json" && parseJsonField(form[field.key]) === undefined) {
+      errors[field.key] = "Este texto não é um JSON válido. Confira chaves, aspas e vírgulas.";
+    }
+  }
+  return errors;
+}
+
+function toPayloadValue(field: CrudField, rawValue: unknown): unknown {
+  if (field.type === "boolean") return Boolean(rawValue);
+  if (field.type === "number") return rawValue === "" || rawValue === null ? null : Number(rawValue);
+  if (field.type === "json") return parseJsonField(rawValue);
+  const clean = String(rawValue ?? "").trim();
+  return clean === "" ? null : clean;
 }
 
 const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
@@ -64,6 +82,19 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, any>>(defaultValues);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [lookups, setLookups] = useState<Record<string, CrudOption[]>>({});
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const basicFields = useMemo(() => fields.filter((field) => field.type !== "json"), [fields]);
+  const advancedFields = useMemo(() => fields.filter((field) => field.type === "json"), [fields]);
+  const editingLabel = useMemo(() => {
+    const row = rows.find((candidate) => String(candidate.id) === editingId);
+    const value = row && columns[0] ? row[columns[0].key] : null;
+    return typeof value === "string" && value.trim() ? value.trim() : "registro";
+  }, [columns, editingId, rows]);
+
+  const revealForm = () => formRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
   const effectiveDefaults = useMemo(() => {
     const base = { ...defaultValues };
@@ -74,7 +105,41 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
   const resetForm = () => {
     setEditingId(null);
     setForm(effectiveDefaults);
+    setErrors({});
   };
+
+  const startNew = () => {
+    resetForm();
+    revealForm();
+  };
+
+  // As telas passam `fields` como literal: a chave em texto evita buscar de novo a cada render.
+  const lookupFields = fields.filter((field) => field.type === "lookup" && field.lookup);
+  const lookupSignature = JSON.stringify(lookupFields.map((field) => [field.key, field.lookup]));
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLookups = async () => {
+      const entries = await Promise.all(
+        lookupFields.map(async (field) => {
+          const lookup = field.lookup!;
+          let query = supabase.from(lookup.table).select(`${lookup.valueKey}, ${lookup.labelKey}`);
+          if (lookup.storeScoped && selectedStoreId) query = query.eq("store_id", selectedStoreId);
+          const { data } = await query;
+          const options = ((data || []) as Record<string, any>[]).map((row) => ({
+            value: String(row[lookup.valueKey]),
+            label: String(row[lookup.labelKey] || row[lookup.valueKey]),
+          }));
+          return [field.key, options] as const;
+        })
+      );
+      if (!cancelled) setLookups(Object.fromEntries(entries));
+    };
+    if (lookupFields.length > 0) void loadLookups();
+    return () => {
+      cancelled = true;
+    };
+  }, [lookupSignature, selectedStoreId]);
 
   const loadRows = async () => {
     if (requireStore && !selectedStoreId) return;
@@ -110,6 +175,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
 
   const setField = (key: string, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: "" } : prev));
   };
 
   const startEdit = (row: Record<string, any>) => {
@@ -121,6 +187,8 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
     });
     if (requireStore && !next[storeColumn]) next[storeColumn] = selectedStoreId;
     setForm(next);
+    setErrors({});
+    revealForm();
   };
 
   const save = async () => {
@@ -128,35 +196,18 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       toast.error("Não foi possível resolver a loja padrão do CRM.");
       return;
     }
-    for (const field of fields) {
-      if (field.required && !String(form[field.key] ?? "").trim()) {
-        toast.error(`Campo obrigatório: ${field.label}`);
-        return;
-      }
+    const nextErrors = validateFields(fields, form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      revealForm();
+      return;
     }
 
     setSaving(true);
     try {
       const payload: Record<string, any> = {};
       fields.forEach((field) => {
-        const rawValue = form[field.key];
-        if (field.type === "boolean") {
-          payload[field.key] = Boolean(rawValue);
-          return;
-        }
-        if (field.type === "number") {
-          payload[field.key] = rawValue === "" || rawValue === null ? null : Number(rawValue);
-          return;
-        }
-        if (field.type === "json") {
-          payload[field.key] = typeof rawValue === "string" ? parseJsonSafe(rawValue) : rawValue;
-          if (payload[field.key] === null) payload[field.key] = {};
-          return;
-        }
-        if (field.type === "textarea" || field.type === "text" || !field.type) {
-          const clean = String(rawValue ?? "").trim();
-          payload[field.key] = clean === "" ? null : clean;
-        }
+        payload[field.key] = toPayloadValue(field, form[field.key]);
       });
 
       if (requireStore) {
@@ -240,55 +291,54 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
             <RefreshCw size={16} />
             Atualizar
           </button>
-          <button type="button" className="crm-btn crm-btn-primary" onClick={resetForm}>
+          <button type="button" className="crm-btn crm-btn-primary" onClick={startNew}>
             <Plus size={16} />
             Novo
           </button>
         </>
       )}
     >
-      <div className="crm-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Editor</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((field) => (
-            <label key={field.key} className="space-y-1">
-              <span className="crm-field-label">
-                {field.label}
-                {field.required ? " *" : ""}
-              </span>
-              {field.type === "textarea" || field.type === "json" ? (
-                <textarea
-                  className="crm-input min-h-[92px]"
-                  value={String(form[field.key] ?? "")}
-                  onChange={(event) => setField(field.key, event.target.value)}
-                />
-              ) : field.type === "boolean" ? (
-                <select
-                  className="crm-input"
-                  value={String(Boolean(form[field.key]))}
-                  onChange={(event) => setField(field.key, event.target.value === "true")}
-                >
-                  <option value="true">Ativo</option>
-                  <option value="false">Inativo</option>
-                </select>
-              ) : field.type === "number" ? (
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  className="crm-input"
-                  value={String(form[field.key] ?? "")}
-                  onChange={(event) => setField(field.key, event.target.value)}
-                />
-              ) : (
-                <input
-                  className="crm-input"
-                  value={String(form[field.key] ?? "")}
-                  onChange={(event) => setField(field.key, event.target.value)}
-                />
-              )}
-            </label>
+      <div ref={formRef} className="crm-card p-4 space-y-4 scroll-mt-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {editingId ? `Editando: ${editingLabel}` : "Novo registro"}
+          </h3>
+          {editingId && (
+            <button type="button" className="crm-btn crm-btn-secondary" onClick={resetForm}>
+              Cancelar edição
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
+          {basicFields.map((field) => (
+            <CRMCrudField
+              key={field.key}
+              field={field}
+              value={form[field.key]}
+              error={errors[field.key]}
+              lookupOptions={lookups[field.key]}
+              onChange={(value) => setField(field.key, value)}
+            />
           ))}
         </div>
+        {advancedFields.length > 0 && (
+          <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700" open={advancedFields.some((field) => errors[field.key]) || undefined}>
+            <summary className="flex min-h-6 cursor-pointer select-none items-center text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Avançado (opcional)
+            </summary>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
+              {advancedFields.map((field) => (
+                <CRMCrudField
+                  key={field.key}
+                  field={field}
+                  value={form[field.key]}
+                  error={errors[field.key]}
+                  onChange={(value) => setField(field.key, value)}
+                />
+              ))}
+            </div>
+          </details>
+        )}
         <button type="button" className="crm-btn crm-btn-primary" disabled={saving} onClick={() => void save()}>
           <Save size={16} />
           {saving ? "Salvando..." : editingId ? "Atualizar" : "Criar"}
