@@ -316,3 +316,4 @@ ${renderFooter(data)}
 };
 
 export const quoteDocumentFileName = (quoteNumber: number) => `orcamento-${formatQuoteNumber(quoteNumber).toLowerCase()}.html`;
+export const quotePdfFileName = (quoteNumber: number) => `orcamento-${formatQuoteNumber(quoteNumber).toLowerCase()}.pdf`;

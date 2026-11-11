@@ -9,7 +9,7 @@ Leia antes de mexer em `pages/pdv/quote/`, `pages/PDVQuotes`, `pages/PDVQuoteNew
 - Dois modos: "Compra conjunta" (total + desconto opcional) e "Opções para comparar" (cada item com preço/parcelas próprios, sem desconto; só com 2+ itens).
 - Item manual pode ser "Sob encomenda": marca interna, NÃO aparece no documento; só o "prazo de entrega" opcional aparece.
 - Parcelas usam `cardFeeSettings` (`utils/cardFees`, mesma fórmula do PDV: valor/(1-taxa)).
-- Documento: HTML autocontido gerado pela função pura `buildQuoteDocumentHtml` (CSS embutido com valores dos tokens `--ds-*`, sempre claro, `@page` A4). Saídas em `quoteDelivery.ts`: baixar .html, `navigator.share` com arquivo (fallback download), imprimir o iframe = "Salvar como PDF". Logo via `useReceiptLogo` (data URL); sem logo usa monograma.
+- Documento: HTML autocontido gerado pela função pura `buildQuoteDocumentHtml` (CSS embutido com valores dos tokens `--ds-*`, sempre claro, `@page` A4). Saídas: "Baixar" salva o .html; "PDF" e "Enviar" geram o PDF no aparelho (`quotePdf.ts`: iframe oculto de 794 px → html2canvas → jsPDF A4, margem de 12 mm, corte de página entre blocos via `planPageSlices`) e entregam por `deliverQuotePdf` (`navigator.share` com arquivo; sem suporte, download). Não usar `window.print()`: não funciona no iPhone com o app instalado. O estilo do PDF desliga `tabular-nums` (o canvas não desenha e o texto sai com buracos). Logo via `useReceiptLogo` (data URL); sem logo usa monograma.
 - Dados só por `services/quotesApi.ts`.
 - Testes: `supabase/tests/pglite/pdv_quotes.sql`, `pages/pdv/quote/quoteModel.test.ts`, `quoteDocument.test.ts`.
 - Rotas: `/pdv/orcamentos` (lista) e `/pdv/orcamentos/novo` (aceita `location.state.baseQuote` para duplicar), ambas `requiredPermission="pdv"`.

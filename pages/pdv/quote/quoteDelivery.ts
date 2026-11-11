@@ -1,6 +1,6 @@
 /**
- * Saídas do documento do orçamento no navegador: baixar, compartilhar e imprimir.
- * Imprimir abre o diálogo do sistema, onde também dá para "Salvar como PDF".
+ * Saídas do documento do orçamento no navegador: baixar o .html, compartilhar e entregar o PDF.
+ * O PDF é gerado no aparelho (`quotePdf.ts`); nada aqui depende do diálogo de impressão.
  */
 export type QuoteShareResult = 'shared' | 'downloaded' | 'cancelled';
 
@@ -8,8 +8,11 @@ const isAbortError = (error: unknown) => (error as { name?: string } | null)?.na
 
 const htmlBlob = (html: string) => new Blob([html], { type: 'text/html;charset=utf-8' });
 
-export const downloadQuoteHtml = (html: string, fileName: string) => {
-  const url = URL.createObjectURL(htmlBlob(html));
+const canShareFile = (file: File) =>
+  typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
@@ -19,14 +22,17 @@ export const downloadQuoteHtml = (html: string, fileName: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const canShareFile = (file: File) =>
-  typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+export const downloadQuoteHtml = (html: string, fileName: string) => downloadBlob(htmlBlob(html), fileName);
 
-// Celular: folha de compartilhar do sistema (WhatsApp, Mail, Arquivos). Sem suporte a arquivo: baixa.
-export const shareQuoteHtml = async (html: string, fileName: string, title: string): Promise<QuoteShareResult> => {
-  const file = new File([htmlBlob(html)], fileName, { type: 'text/html' });
+/**
+ * Entrega o PDF pronto. No celular abre a folha do sistema (WhatsApp, Arquivos, Imprimir):
+ * é o único caminho confiável no iPhone com o app instalado, onde link de download e
+ * `window.print()` não funcionam. Sem suporte a compartilhar arquivo, baixa.
+ */
+export const deliverQuotePdf = async (pdf: Blob, fileName: string, title: string): Promise<QuoteShareResult> => {
+  const file = new File([pdf], fileName, { type: 'application/pdf' });
   if (!canShareFile(file)) {
-    downloadQuoteHtml(html, fileName);
+    downloadBlob(pdf, fileName);
     return 'downloaded';
   }
   try {
@@ -36,12 +42,4 @@ export const shareQuoteHtml = async (html: string, fileName: string, title: stri
     if (isAbortError(error)) return 'cancelled';
     throw error;
   }
-};
-
-export const printQuoteFrame = (frame: HTMLIFrameElement | null) => {
-  const target = frame?.contentWindow;
-  if (!target) return false;
-  target.focus();
-  target.print();
-  return true;
 };
