@@ -179,7 +179,7 @@ Aplicado na branch `claude/fervent-gauss-xvl2g8`. Suíte: 1.230 testes passando,
 | Financeiro | 80% | 85% | saldos antes dos cards de estoque |
 | Agentes IA · Assistente · Canais · Leads · Estatísticas · Ads | 60–75% | 70–80% | botão primário visível no ERP, rótulos em português, título no celular, confirmação do app |
 
-Média das 35 telas: 72% → 75,6%; 14 telas em 80% ou mais; nenhuma abaixo de 60%. As notas "depois" vêm das recapturas das telas alteradas (mesma emulação); as demais telas não foram remedidas.
+Média das 35 telas: 72% → 76%; 15 telas em 80% ou mais; nenhuma abaixo de 60%. As notas "depois" vêm das recapturas das telas alteradas (mesma emulação); as demais telas não foram remedidas.
 
 ### O que não foi feito, e por quê
 
