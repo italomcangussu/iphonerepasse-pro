@@ -1028,7 +1028,7 @@ const PDV: React.FC = () => {
           if (clientPaymentMode === 'immediate') {
             toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} pago ao cliente via ${clientPaymentMethod}.`);
           } else {
-            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às contas a pagar.`);
+            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às dívidas ativas.`);
           }
         } else {
           toast.success('Venda registrada.');
@@ -1255,7 +1255,7 @@ const PDV: React.FC = () => {
             {lastSale.clientPaymentAmount && lastSale.clientPaymentAmount > 0
               ? lastSale.clientPaymentMode === 'immediate'
                 ? `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} pago ao cliente via ${lastSale.clientPaymentMethod}.`
-                : `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} lançado como conta a pagar.`
+                : `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} lançado como dívida ativa.`
               : 'A venda foi registrada e o estoque atualizado.'}
           </m.p>
 
@@ -1694,7 +1694,7 @@ const PDV: React.FC = () => {
                     <div>
                       <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
                       <p className="font-semibold mt-1">
-                        {lastSale.clientPaymentMode === 'immediate' ? 'Pago na hora' : 'Conta a pagar'}
+                        {lastSale.clientPaymentMode === 'immediate' ? 'Pago na hora' : 'Dívida ativa'}
                       </p>
                     </div>
                     {lastSale.clientPaymentMode === 'immediate' && (
@@ -2415,7 +2415,7 @@ const PDV: React.FC = () => {
                         aria-pressed={clientPaymentMode === 'payable_debt'}
                         className={`ios-button-secondary text-sm ${clientPaymentMode === 'payable_debt' ? 'border-brand-500 text-brand-600' : ''}`}
                       >
-                        Conta a pagar
+                        Dívida ativa
                       </button>
                     </div>
                   </div>

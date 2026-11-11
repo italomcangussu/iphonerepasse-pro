@@ -68,7 +68,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'settings_accounts', label: 'Senhas e Contas', routePrefixes: [] },
   { key: 'user_logs', label: 'Log de usuarios', routePrefixes: [] },
   { key: 'permissions_privacy', label: 'Permissoes e Privacidade', routePrefixes: [] },
-  { key: 'payable_debts', label: 'Contas a pagar', routePrefixes: ['/payable-debts'] },
+  { key: 'payable_debts', label: 'Dívidas Ativas', routePrefixes: ['/payable-debts'] },
   { key: 'marketing', label: 'Marketing e Automações', routePrefixes: ['/marketing'] },
   { key: 'care', label: 'Repasse Care+ (regras, contratos e acionamentos)', routePrefixes: ['/care'] },
 ];

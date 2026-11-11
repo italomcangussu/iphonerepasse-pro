@@ -210,7 +210,7 @@ export function composeSaleReceipt(data: ThermalReceiptData): ReceiptBlock[] {
       kind: 'alert',
       label: 'Saldo em aberto',
       value: formatReceiptCurrency(pendingTotal),
-      // "Conta a pagar" é o nome do conceito no ERP; no comprovante do cliente
+      // "Dívida ativa" é o nome do conceito no ERP; no comprovante do cliente
       // vale a palavra que ele entende sem tradução.
       note: 'Pagamento pendente registrado na loja.'
     });

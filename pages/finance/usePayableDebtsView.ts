@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Creditor, PayableDebt, PayableDebtStatus } from '../../types';
 import { calculatePayableDebtSummary, filterPayableDebts, sortPayableDebtsByDueDate } from '../../utils/payableDebts';
 
-// Aba Contas a pagar: totais, busca, filtros e página da lista somente leitura.
+// Aba Dívidas Ativas: totais, busca, filtros e página da lista somente leitura.
 export const usePayableDebtsView = (payableDebts: PayableDebt[], creditors: Creditor[]) => {
   const [pdSearchTerm, setPdSearchTerm] = useState('');
   const [pdStatusFilter, setPdStatusFilter] = useState<PayableDebtStatus | 'all'>('all');

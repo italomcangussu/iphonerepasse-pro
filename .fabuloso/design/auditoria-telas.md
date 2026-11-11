@@ -201,3 +201,7 @@ Média das 35 telas: 72% → 76%; 15 telas em 80% ou mais; nenhuma abaixo de 60%
 - **Passo de pagamento:** as formas de pagamento ficam inteiras na primeira dobra; a negociação de valor e o desconto vêm logo depois.
 
 Notas: Nova venda 75% → 85%, Login 80% → 85%, Contas a pagar 65% → 75%. Média das 35 telas: 77%; 16 em 80% ou mais.
+
+### Decisão de negócio (2026-11-11): "Dívidas Ativas" fica
+
+A renomeação para "Contas a pagar" foi desfeita a pedido do dono: Dívidas Ativas é um conceito próprio do negócio e não deve se confundir com contas a pagar. O nome volta em menu, permissões, Financeiro, PDV e mensagens. Não propor essa troca de novo.

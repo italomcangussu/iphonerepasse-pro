@@ -7,7 +7,7 @@ import AccountSummaryCard from './AccountSummaryCard';
 import { debtStatusBadgeClass } from './financeHelpers';
 
 const PAGE_SIZE_PD = 15;
-const EMPTY_MESSAGE = 'Nenhuma conta a pagar cadastrada.';
+const EMPTY_MESSAGE = 'Nenhuma dívida ativa cadastrada.';
 
 interface PayableDebtRowProps {
   debt: PayableDebt;
@@ -96,7 +96,7 @@ const PayableDebtFilters: React.FC<PayableDebtFiltersProps> = ({
     <div className="relative">
       <input
         type="search"
-        aria-label="Buscar contas a pagar"
+        aria-label="Buscar dívidas ativas"
         className="ios-input pl-4"
         placeholder="Buscar por credor ou observação..."
         value={pdSearchTerm}
@@ -153,7 +153,7 @@ const PayableDebtsTab: React.FC<PayableDebtsTabProps> = ({
       <div className="ios-card overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Contas a pagar</h3>
+            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Dívidas Ativas</h3>
             <p className="text-xs text-gray-500 dark:text-surface-dark-500">Somente leitura. Gerencie na tela dedicada.</p>
           </div>
           <Link to="/payable-debts" className="ios-button-secondary shrink-0 whitespace-nowrap">

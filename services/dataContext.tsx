@@ -2607,13 +2607,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const assertTransactionEditable = async (transaction: Transaction | undefined, updates?: Omit<Transaction, 'id'>) => {
     if (!transaction) return;
     if (transaction.payableDebtId) {
-      throw new Error('Este lançamento é uma entrada de conta a pagar. Para revertê-lo, exclua a dívida correspondente na página Contas a pagar.');
+      throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
     }
     if (transaction.debtPaymentId) {
       throw new Error('Este lançamento é um pagamento de dívida. Para corrigi-lo, cancele o lançamento (estorna o pagamento) e registre um novo pagamento.');
     }
     if (transaction.payableDebtPaymentId) {
-      throw new Error('Este lançamento é um pagamento de conta a pagar. Para corrigi-lo, cancele o lançamento e registre um novo pagamento.');
+      throw new Error('Este lançamento é um pagamento de dívida ativa. Para corrigi-lo, cancele o lançamento e registre um novo pagamento.');
     }
     if (transaction.saleId) {
       throw new Error('Este lançamento foi gerado por uma venda. Para corrigi-lo, edite ou cancele a venda correspondente no Histórico do PDV.');
@@ -2690,7 +2690,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingTrx = transactions.find(t => t.id === id);
 
       if (existingTrx?.payableDebtId) {
-        throw new Error('Este lançamento é uma entrada de conta a pagar. Para revertê-lo, exclua a dívida correspondente na página Contas a pagar.');
+        throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
       }
 
       // Espelha os bloqueios do RPC cancel_transaction para falhar com

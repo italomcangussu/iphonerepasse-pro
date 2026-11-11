@@ -38,7 +38,7 @@ import { useAccountStatement } from './finance/useAccountStatement';
 const FINANCE_TAB_GROUPS: { id: string; label: string; tabs: { id: TabType; label: string }[] }[] = [
   { id: 'dashboard', label: 'Dashboard', tabs: [{ id: 'dashboard', label: 'Dashboard' }] },
   { id: 'cash', label: 'Caixa', tabs: [{ id: 'bank', label: ACCOUNT_BANK }, { id: 'safe', label: ACCOUNT_SAFE }] },
-  { id: 'debts', label: 'Dívidas', tabs: [{ id: 'debtors', label: 'Devedores' }, { id: 'payable_debts', label: 'Contas a pagar' }] },
+  { id: 'debts', label: 'Dívidas', tabs: [{ id: 'debtors', label: 'Devedores' }, { id: 'payable_debts', label: 'Dívidas Ativas' }] },
   { id: 'faturamento', label: 'Faturamento', tabs: [{ id: 'faturamento', label: 'Faturamento' }] }
 ];
 const groupOfTab = (tab: TabType) => FINANCE_TAB_GROUPS.find((group) => group.tabs.some((t) => t.id === tab)) ?? FINANCE_TAB_GROUPS[0];
