@@ -165,7 +165,6 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
     setEditableSimulatorMessage('');
     resetDrafts();
     // stockItems fica de fora: a lista muda com o realtime e não deve zerar a simulação aberta.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, resetDrafts]);
 
   const desiredDevice = useMemo(() => (
