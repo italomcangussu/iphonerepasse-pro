@@ -51,6 +51,7 @@ describe('stock form model', () => {
       warrantyType: WarrantyType.STORE,
       costs: [],
       photos: [],
+      videos: [],
       origin: '',
       notes: '',
       observations: '',
@@ -219,6 +220,7 @@ describe('stock form model', () => {
       observations: 'observacao final',
       costs: [{ id: 'cost-1', description: 'Tela', amount: 100, date: '2026-06-01' }],
       photos: ['https://cdn/photo-1.jpg'],
+      videos: [],
       entryDate: '2026-05-01T00:00:00.000Z'
     });
   });

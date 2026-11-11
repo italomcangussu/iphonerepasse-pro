@@ -9,28 +9,52 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   heic: 'image/heic',
   heif: 'image/heif',
   svg: 'image/svg+xml',
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
 };
 
-const BUCKET_FILE_SIZE_LIMIT: Record<'logos' | 'device-images', number> = {
+type ImageBucket = 'logos' | 'device-images';
+export type StorageBucket = ImageBucket | 'device-videos';
+
+export const MAX_DEVICE_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+
+const BUCKET_FILE_SIZE_LIMIT: Record<StorageBucket, number> = {
   logos: 5 * 1024 * 1024,
   'device-images': 15 * 1024 * 1024,
+  'device-videos': MAX_DEVICE_VIDEO_SIZE_BYTES,
 };
 
-const ALLOWED_BUCKET_MIME_TYPES: Record<'logos' | 'device-images', Set<string>> = {
+const ALLOWED_BUCKET_MIME_TYPES: Record<StorageBucket, Set<string>> = {
   'device-images': new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']),
   logos: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']),
+  'device-videos': new Set(['video/mp4', 'video/quicktime', 'video/webm']),
 };
+
+const UNSUPPORTED_FORMAT_MESSAGE: Record<StorageBucket, string> = {
+  logos: 'Formato de imagem não suportado para este upload.',
+  'device-images': 'Formato de imagem não suportado para este upload.',
+  'device-videos': 'Formato de vídeo não suportado. Use MP4, MOV ou WebM.',
+};
+
+const EXTENSION_BY_MIME_FRAGMENT: Array<[fragment: string, extension: string]> = [
+  ['png', 'png'],
+  ['webp', 'webp'],
+  ['heic', 'heic'],
+  ['heif', 'heif'],
+  ['svg', 'svg'],
+  ['quicktime', 'mov'],
+  ['webm', 'webm'],
+  ['video/', 'mp4'],
+];
 
 const resolveExtension = (file: File) => {
   const fromName = file.name.split('.').pop()?.toLowerCase();
   if (fromName && /^[a-z0-9]+$/i.test(fromName)) return fromName;
 
-  if (file.type.includes('png')) return 'png';
-  if (file.type.includes('webp')) return 'webp';
-  if (file.type.includes('heic')) return 'heic';
-  if (file.type.includes('heif')) return 'heif';
-  if (file.type.includes('svg')) return 'svg';
-  return 'jpg';
+  const match = EXTENSION_BY_MIME_FRAGMENT.find(([fragment]) => file.type.includes(fragment));
+  return match ? match[1] : 'jpg';
 };
 
 const normalizeMimeType = (file: File, fileExt: string) => {
@@ -42,10 +66,10 @@ const normalizeMimeType = (file: File, fileExt: string) => {
   return MIME_BY_EXTENSION[fileExt] || 'image/jpeg';
 };
 
-export const uploadImage = async (file: File, bucket: 'logos' | 'device-images'): Promise<string> => {
+const uploadToBucket = async (file: File, bucket: StorageBucket): Promise<string> => {
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session?.access_token) {
-    throw new Error('Sessão expirada. Faça login novamente para enviar imagens.');
+    throw new Error('Sessão expirada. Faça login novamente para enviar arquivos.');
   }
 
   const fileExt = resolveExtension(file);
@@ -58,10 +82,10 @@ export const uploadImage = async (file: File, bucket: 'logos' | 'device-images')
   }
 
   if (!allowedMimeTypes.has(contentType)) {
-    throw new Error('Formato de imagem não suportado para este upload.');
+    throw new Error(UNSUPPORTED_FORMAT_MESSAGE[bucket]);
   }
 
-  const filePath = `${newId('img')}.${fileExt}`;
+  const filePath = `${newId(bucket === 'device-videos' ? 'vid' : 'img')}.${fileExt}`;
 
   const { data: uploaded, error: uploadError } = await supabase.storage
     .from(bucket)
@@ -72,17 +96,23 @@ export const uploadImage = async (file: File, bucket: 'logos' | 'device-images')
     });
 
   if (uploadError) {
-    throw new Error(uploadError.message || 'Falha ao enviar imagem para o storage.');
+    throw new Error(uploadError.message || 'Falha ao enviar o arquivo para o storage.');
   }
 
   const uploadedPath = uploaded?.path || filePath;
   const { data } = supabase.storage.from(bucket).getPublicUrl(uploadedPath);
   if (!data?.publicUrl) {
-    throw new Error('Upload concluído, mas não foi possível gerar URL pública da imagem.');
+    throw new Error('Upload concluído, mas não foi possível gerar a URL pública do arquivo.');
   }
 
   return data.publicUrl;
 };
+
+export const uploadImage = (file: File, bucket: ImageBucket): Promise<string> =>
+  uploadToBucket(file, bucket);
+
+export const uploadDeviceVideo = (file: File): Promise<string> =>
+  uploadToBucket(file, 'device-videos');
 
 const PUBLIC_OBJECT_SEGMENT = '/storage/v1/object/public/';
 
@@ -93,7 +123,7 @@ const PUBLIC_OBJECT_SEGMENT = '/storage/v1/object/public/';
  */
 export const resolveStoragePath = (
   urlOrPath: string,
-  bucket: 'logos' | 'device-images'
+  bucket: StorageBucket
 ): string | null => {
   const value = (urlOrPath || '').trim();
   if (!value) return null;
@@ -118,13 +148,13 @@ export const resolveStoragePath = (
 };
 
 /**
- * Remove um conjunto de imagens do storage de forma best-effort: erros são
+ * Remove um conjunto de arquivos (imagens ou vídeos) do storage de forma best-effort: erros são
  * registrados mas não interrompem o fluxo do chamador (limpeza não deve
  * impedir salvar/excluir um registro).
  */
 export const removeImages = async (
   urlsOrPaths: string[],
-  bucket: 'logos' | 'device-images'
+  bucket: StorageBucket
 ): Promise<void> => {
   const paths = Array.from(
     new Set(
@@ -148,5 +178,5 @@ export const removeImages = async (
 
 export const removeImage = (
   urlOrPath: string,
-  bucket: 'logos' | 'device-images'
+  bucket: StorageBucket
 ): Promise<void> => removeImages([urlOrPath], bucket);

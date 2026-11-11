@@ -7,7 +7,7 @@ import { CAPACITIES } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
-import { uploadImage, removeImage, removeImages } from '../services/storage';
+import { MAX_DEVICE_VIDEO_SIZE_BYTES, uploadDeviceVideo, uploadImage, removeImage, removeImages } from '../services/storage';
 import { setPwaAutoReloadBlocked } from '../services/pwa';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, maskDecimalInput, parseCurrencyBRL, parseDecimalBRL } from '../utils/inputMasks';
@@ -29,6 +29,9 @@ import {
   createInitialStockFormState
 } from './stock-form/stockFormModel';
 import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
+import StockVideoSection from './stock-form/StockVideoSection';
+import { describeVideoRejections, selectVideosToUpload } from './stock-form/stockVideos';
+import { useStockVideoUploads } from './stock-form/useStockVideoUploads';
 import {
   buildStockFormDraftKey,
   clearStockFormDraft,
@@ -281,6 +284,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       }));
     }
   });
+  const uploadedVideos = formData.videos || [];
+  const appendUploadedVideo = useCallback((url: string) => {
+    setFormData((prev) => ({ ...prev, videos: [...(prev.videos || []), url] }));
+  }, []);
+  const { pendingCount: pendingVideoCount, isUploadingVideos, uploadVideos } = useStockVideoUploads({
+    uploadVideo: uploadDeviceVideo,
+    onUploaded: appendUploadedVideo
+  });
   const imeiLookupState = getImeiLookupState(formData.type, formData.imei);
   const canLookupByImei = imeiLookupState.canLookupByImei;
   const supportsCapacity = supportsDeviceCapacity(formData.type);
@@ -317,7 +328,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     [draftContext, isEditing, initialData?.id]
   );
   const formSessionKey = draftKey ?? (isEditing ? `edit:${initialData?.id ?? ''}` : 'new');
-  const isSaveBusy = isUploading || isSaving;
+  const isSaveBusy = isUploading || isUploadingVideos || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
   const currentModels = useMemo(
@@ -397,13 +408,18 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     if (sessionUploadedPhotos.length > 0) {
       void removeImages(sessionUploadedPhotos, 'device-images');
     }
+    const originalVideos = initialData?.videos || [];
+    const sessionUploadedVideos = (formData.videos || []).filter((url) => !originalVideos.includes(url));
+    if (sessionUploadedVideos.length > 0) {
+      void removeImages(sessionUploadedVideos, 'device-videos');
+    }
 
     setFormData(baseFormState);
     clearLocalPhotoQueue();
     setIsCameraCaptureMode(false);
     setActiveTab('info');
     clearDraft();
-  }, [initialData, formData.photos, baseFormState, clearLocalPhotoQueue, clearDraft]);
+  }, [initialData, formData.photos, formData.videos, baseFormState, clearLocalPhotoQueue, clearDraft]);
   
   useEffect(() => {
     if (!open) {
@@ -592,6 +608,33 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         photos: moveItemInArray(photos, index, 0),
       };
     });
+  };
+
+  const handleVideoFilesPicked = async (files: File[]) => {
+    const selection = selectVideosToUpload({
+      files,
+      currentCount: uploadedVideos.length + pendingVideoCount,
+      maxBytes: MAX_DEVICE_VIDEO_SIZE_BYTES
+    });
+    describeVideoRejections(selection, MAX_DEVICE_VIDEO_SIZE_BYTES).forEach((message) => toast.info(message));
+    if (selection.accepted.length === 0) return;
+
+    const { failedCount } = await uploadVideos(selection.accepted);
+    if (failedCount > 0) {
+      toast.error(`${failedCount} vídeo(s) não foram enviados. Confira a conexão e adicione de novo.`);
+    }
+  };
+
+  // Mesma regra das fotos: só apaga do storage o vídeo enviado nesta sessão; o
+  // que já estava salvo é reconciliado em updateStockItem ao salvar.
+  const removeUploadedVideo = (index: number) => {
+    const removedUrl = uploadedVideos[index];
+    if (!removedUrl) return;
+    setFormData((prev) => ({ ...prev, videos: (prev.videos || []).filter((url) => url !== removedUrl) }));
+    const wasAlreadyPersisted = (initialData?.videos || []).includes(removedUrl);
+    if (!wasAlreadyPersisted) {
+      void removeImage(removedUrl, 'device-videos');
+    }
   };
 
   const uploadQueuedPhotos = async (trigger: 'manual' | 'save') => {
@@ -1531,6 +1574,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         A primeira foto é a capa e aparece na lista do estoque.
                     </p>
                 </div>
+
+                <StockVideoSection
+                    videos={uploadedVideos}
+                    pendingCount={pendingVideoCount}
+                    maxSizeMb={Math.round(MAX_DEVICE_VIDEO_SIZE_BYTES / (1024 * 1024))}
+                    onPickFiles={(files) => void handleVideoFilesPicked(files)}
+                    onRemove={removeUploadedVideo}
+                />
             </div>
         )}
 

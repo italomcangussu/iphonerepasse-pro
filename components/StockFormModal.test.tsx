@@ -7,6 +7,7 @@ import { Condition, DeviceType, StockStatus, WarrantyType, type StockItem } from
 
 const useDataMock = vi.fn();
 const uploadImageMock = vi.fn();
+const uploadDeviceVideoMock = vi.fn();
 const removeImageMock = vi.fn();
 const removeImagesMock = vi.fn();
 const updateStockItemMock = vi.fn();
@@ -30,6 +31,8 @@ vi.mock('../components/ui/ToastProvider', () => ({
 }));
 
 vi.mock('../services/storage', () => ({
+  MAX_DEVICE_VIDEO_SIZE_BYTES: 50 * 1024 * 1024,
+  uploadDeviceVideo: (...args: unknown[]) => uploadDeviceVideoMock(...args),
   uploadImage: (...args: unknown[]) => uploadImageMock(...args),
   removeImage: (...args: unknown[]) => removeImageMock(...args),
   removeImages: (...args: unknown[]) => removeImagesMock(...args),
@@ -492,6 +495,42 @@ describe('StockFormModal photo queue workflow', () => {
     await user.type(acquisitionCostInput, '1');
 
     expect(acquisitionCostInput).toHaveValue('R$ 0,01');
+  });
+
+  it('envia o vídeo escolhido e salva o aparelho com ele', async () => {
+    const user = userEvent.setup();
+    uploadDeviceVideoMock.mockResolvedValueOnce('https://cdn.test/video-1.mp4');
+    updateStockItemMock.mockResolvedValue(undefined);
+
+    render(<StockFormModal open initialData={baseItem} onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const video = new File([new Uint8Array(1024)], 'aparelho.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('stock-video-input'), { target: { files: [video] } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remover vídeo 1' })).toBeInTheDocument());
+    expect(uploadDeviceVideoMock).toHaveBeenCalledWith(video);
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    await user.click(screen.getByRole('button', { name: /Salvar|Concluir/i }));
+
+    await waitFor(() => expect(updateStockItemMock).toHaveBeenCalledWith(
+      baseItem.id,
+      expect.objectContaining({ videos: ['https://cdn.test/video-1.mp4'] })
+    ));
+  });
+
+  it('recusa vídeo acima do limite sem enviar', async () => {
+    const user = userEvent.setup();
+    render(<StockFormModal open initialData={baseItem} onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const video = new File(['x'], 'grande.mp4', { type: 'video/mp4' });
+    Object.defineProperty(video, 'size', { value: 51 * 1024 * 1024 });
+    fireEvent.change(screen.getByTestId('stock-video-input'), { target: { files: [video] } });
+
+    await waitFor(() => expect(toastApi.info).toHaveBeenCalledWith(expect.stringContaining('acima de 50 MB')));
+    expect(uploadDeviceVideoMock).not.toHaveBeenCalled();
   });
 
   it('prevents duplicate inserts when the save action is clicked twice', async () => {

@@ -25,6 +25,7 @@ export const createDefaultStockFormState = (stores: StoreLocation[]): Partial<St
   warrantyType: WarrantyType.STORE,
   costs: [],
   photos: [],
+  videos: [],
   origin: '',
   notes: '',
   observations: '',
@@ -95,6 +96,7 @@ export const buildStockItemPayload = ({
     observations,
     costs: formData.costs || [],
     photos: formData.photos || [],
+    videos: formData.videos || [],
     entryDate: formData.entryDate || now.toISOString()
   };
 };

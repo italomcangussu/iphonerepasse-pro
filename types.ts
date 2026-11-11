@@ -102,6 +102,8 @@ export interface StockItem {
   observations?: string;
   costs: CostItem[];
   photos: string[];
+  /** URLs públicas dos vídeos do aparelho (bucket `device-videos`). */
+  videos?: string[];
   entryDate: string;
   simType?: 'Physical' | 'Virtual' | 'Both' | 'None';
   reservation?: StockReservation | null;

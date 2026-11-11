@@ -59,7 +59,7 @@ import {
 } from './data/realtime/realtimeState';
 import { useDataRealtime } from './data/useDataRealtime';
 import { supabase } from './supabase';
-import { removeImages } from './storage';
+import { removeImages, type StorageBucket } from './storage';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { useOptionalPermissions } from '../contexts/PermissionsContext';
@@ -159,6 +159,12 @@ const mapReservationMessageSettings = (row: any): ReservationMessageSettings => 
     : DEFAULT_RESERVATION_MESSAGE_TEMPLATE,
   sendByDefault: row?.send_by_default !== false
 });
+
+// Apaga do storage (best-effort) os arquivos que o aparelho deixou de referenciar.
+const removeDroppedFiles = (previous: string[], next: string[], bucket: StorageBucket) => {
+  const dropped = previous.filter((url) => !next.includes(url));
+  if (dropped.length > 0) void removeImages(dropped, bucket);
+};
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role, profile } = useAuth();
@@ -1334,6 +1340,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       observations,
       entryDate: i.entry_date,
       photos: i.photos || [],
+      videos: i.videos || [],
       costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: toNumber(c.amount), date: c.date })) || [],
       reservation: reservation || null
     };
@@ -1872,7 +1879,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         notes: observations,
         observations,
         entry_date: item.entryDate,
-        photos: item.photos
+        photos: item.photos,
+        videos: item.videos ?? []
      }).select().single();
 
      if (error) {
@@ -1905,7 +1913,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStockItem = async (id: string, updates: Partial<StockItem>) => {
-    const previousPhotos = stock.find(item => item.id === id)?.photos ?? [];
+    const previousItem = stock.find(item => item.id === id);
+    const previousPhotos = previousItem?.photos ?? [];
+    const previousVideos = previousItem?.videos ?? [];
     // Map updates to snake_case
     const dbUpdates: any = {};
     if (updates.type) dbUpdates.type = updates.type;
@@ -1932,6 +1942,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dbUpdates.observations = mergedObservations;
     }
     if (updates.photos !== undefined) dbUpdates.photos = updates.photos;
+    if (updates.videos !== undefined) dbUpdates.videos = updates.videos;
 
     const { error } = await supabase.from('stock_items').update(dbUpdates).eq('id', id);
     if (error) {
@@ -1942,13 +1953,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Limpa do storage as fotos que deixaram de ser referenciadas por este item.
     // Seguro: fotos só são referenciadas por stock_items.photos.
-    if (updates.photos !== undefined) {
-      const nextPhotos = updates.photos ?? [];
-      const removedPhotos = previousPhotos.filter(url => !nextPhotos.includes(url));
-      if (removedPhotos.length > 0) {
-        void removeImages(removedPhotos, 'device-images');
-      }
-    }
+    if (updates.photos !== undefined) removeDroppedFiles(previousPhotos, updates.photos ?? [], 'device-images');
+    if (updates.videos !== undefined) removeDroppedFiles(previousVideos, updates.videos ?? [], 'device-videos');
 
     logDataEvent('inventory_item_updated', 'Inventory', {
       itemId: id,
@@ -2063,7 +2069,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeStockItem = async (id: string) => {
-    const photosToCleanup = stock.find(item => item.id === id)?.photos ?? [];
+    const itemToRemove = stock.find(item => item.id === id);
+    const photosToCleanup = itemToRemove?.photos ?? [];
+    const videosToCleanup = itemToRemove?.videos ?? [];
     const { error } = await supabase.from('stock_items').delete().eq('id', id);
     if (error) {
       console.error('Error removing stock item:', error);
@@ -2075,9 +2083,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Remove as fotos do item do storage (best-effort). Seguro: nenhuma outra
     // tabela referencia objetos de device-images.
-    if (photosToCleanup.length > 0) {
-      void removeImages(photosToCleanup, 'device-images');
-    }
+    removeDroppedFiles(photosToCleanup, [], 'device-images');
+    removeDroppedFiles(videosToCleanup, [], 'device-videos');
 
     logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
   };
