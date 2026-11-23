@@ -136,6 +136,18 @@ export interface MaskDecimalOptions {
 }
 
 /**
+ * Valor colado com separador de milhar ("1.250,75", "R$ 1.250.000"):
+ * os pontos são milhar e saem. Ponto único sem vírgula depois dele
+ * continua sendo vírgula decimal digitada ("1.5" → "1,5").
+ */
+const stripPastedThousands = (value: string): string => {
+  const lastComma = value.lastIndexOf(',');
+  const dotCount = (value.match(/\./g) || []).length;
+  const commaAfterDots = lastComma > value.lastIndexOf('.') && dotCount > 0;
+  return commaAfterDots || dotCount > 1 ? value.replace(/\./g, '') : value;
+};
+
+/**
  * Converte e formata digitação decimal com vírgula em tempo real.
  * Não converte para número prematuramente (evita zerar ao digitar vírgula ou apagar vírgula).
  * Converte pontos digitados em vírgula e respeita o limite de casas decimais.
@@ -154,7 +166,7 @@ export const maskDecimalInput = (
   if (!value) return '';
 
   // Converte pontos em vírgulas e elimina caracteres inválidos
-  let cleaned = value.replace(/\./g, ',').replace(/[^\d,]/g, '');
+  let cleaned = stripPastedThousands(value).replace(/\./g, ',').replace(/[^\d,]/g, '');
 
   if (!cleaned) return '';
 

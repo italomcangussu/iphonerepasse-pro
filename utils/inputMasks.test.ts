@@ -53,6 +53,14 @@ describe('inputMasks', () => {
       expect(maskDecimalInput('1,87')).toBe('1,87');
     });
 
+    it('drops thousands separators from pasted values', () => {
+      expect(maskDecimalInput('1.250,75')).toBe('1250,75');
+      expect(maskDecimalInput('R$ 1.250,75')).toBe('1250,75');
+      expect(maskDecimalInput('1.250.000')).toBe('1250000');
+      expect(maskDecimalInput('12.345.678,9')).toBe('12345678,9');
+      expect(maskDecimalInput('1,5.')).toBe('1,5');
+    });
+
     it('converts dots to commas automatically', () => {
       expect(maskDecimalInput('1.')).toBe('1,');
       expect(maskDecimalInput('1.87')).toBe('1,87');
