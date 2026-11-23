@@ -10,6 +10,9 @@
 - Bug/teste falhando → `systematic-debugging` (ou `debug`); antes de declarar pronto → `verification-before-completion`
 - agentmap (CLI, não é skill) → "onde fica X / quem usa Y / quais testes rodar"
 - Segurança (auth, RLS, segredos, superfície pública) → `fabuloso-security`
+- Abuso do app (campo, upload, rota, edge function, webhook ou chamada de IA que recebe dado do usuário) → `fabuloso-shield`
+- Testes de fluxo (E2E, regressão, teste quebrado, seletor após mudança de UI) → `fabuloso-qa` (só se um teste afetado falhar ou for pedido)
+- Eval de agente/IA (Bia, agente financeiro) → `fabuloso-agente` + `eval-genius`
 - Nenhuma skill obrigatória ausente.
 
 ## Por área
@@ -22,7 +25,9 @@
 ### Back-end
 - `supabase` — edge functions Deno, Auth, RLS, CLI.
 - `fabuloso-crm` — chat de CRM/WhatsApp (UAZAPI), inbox, follow-up, automações.
-- `fabuloso-agente` — agentes de IA (Bia, memória, prompts, custo, evals).
+- `fabuloso-agente` — agentes de IA (Bia, agente financeiro; memória, prompts, custo, evals).
+- `eval-genius` — decidir, desenhar e ler evals de agente/LLM (casos em `evals/`).
+- `fabuloso-shield` — defesa contra abuso: entrada de usuário, upload, webhook, chamadas de IA.
 - `uazapi` — API UazAPI do WhatsApp.
 - `fabuloso-security` — segredos, auth, RLS, edge functions expostas.
 - `chat-best-practices` — CRM WhatsApp/Instagram (uazapi), realtime, mídia, atribuição de anúncios.
@@ -36,6 +41,7 @@
 - `simulador-ios` — verificar no simulador.
 ### Qualidade de código
 - `fabuloso-uncle-bob` / `uncle-bob` — auditoria e refatoração sem regressão.
+- `fabuloso-qa` — E2E (Playwright), regressão, contrato de edge function, acessibilidade (axe), seletores quebrados.
 - `code-review`, `testing-strategy`, `tech-debt`, `karpathy-guidelines`, `debug`.
 - `test-driven-development`, `receiving-code-review`, `requesting-code-review`, `verification-before-completion`.
 ### Performance
@@ -43,4 +49,6 @@
 ### Estrutural/arquitetura
 - `architecture`, `system-design`, `deploy-checklist`, `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `dispatching-parallel-agents`, `using-git-worktrees`, `finishing-a-development-branch`.
 ### Outras (raramente relevantes)
-- `playwright`, `built-in-browser`, `chrome-browser`, `computer-use` (navegador/tela), `imagegen*`, `image-to-code`, `brandkit`, `humanizer`, `full-output-enforcement`, `openai-docs`, `skill-*`/`plugin-*`/`plugin-creator`/`Hook Development`… (criação de skills/plugins).
+- `playwright`, `built-in-browser`, `chrome-browser`, `computer-use` (navegador/tela), `imagegen*`, `image-to-code`, `brandkit`, `humanizer`, `full-output-enforcement`, `openai-docs`, `skill-*`/`plugin-*`/`Hook Development`… (criação de skills/plugins).
+- `review-agent`, `evolver:*` (setup/evolve/status/deploy) — revisão e otimização por subagente; fora da execução fabuloso.
+- Swift/Xcode nativo (o projeto é PWA, sem app nativo): `swiftui-specialist`, `swiftui-whats-new-27`, `app-intents-specialist`, `app-intents-whats-new-27`, `app-resizability`, `building-document-based-swiftui-applications`, `modernize-tests`, `xctrace`, `audit-xcode-security-settings`, `adopt-c-bounds-safety`, `device-interaction`.

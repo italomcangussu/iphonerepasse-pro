@@ -124,3 +124,5 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: vídeos (até 3) no cadastro/edição do estoque e junto das fotos ao compartilhar o aparelho no WhatsApp.
 - Contexto: `CLAUDE.md` (Conventions, 1 linha) + 2 fluxos em `arquitetura.md`. Mapas regenerados.
 - Banco: migration `20261111120000_stock_item_videos` aplicada no remoto; nenhuma edge function.
+
+- 2026-11-23 · bootstrap parcial (capacidades): +fabuloso-qa, fabuloso-shield, eval-genius nos gatilhos; skills Swift/Xcode, review-agent e evolver em "Outras"; plugin-creator removida. Pendências em aberto: 0.
