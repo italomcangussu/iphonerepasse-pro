@@ -20,5 +20,5 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| bucket payable-debt-receipts | upload, remove, createSignedUrl | pages/PayableDebts.tsx:273, pages/PayableDebts.tsx:300, pages/PayableDebts.tsx:312, pages/PayableDebts.tsx:322 |
+| bucket payable-debt-receipts | upload, remove, createSignedUrl | pages/PayableDebts.tsx:274, pages/PayableDebts.tsx:304, pages/PayableDebts.tsx:316, pages/PayableDebts.tsx:326 |
 | tabela app_user_activity_logs | insert | services/telemetry.ts:72 |

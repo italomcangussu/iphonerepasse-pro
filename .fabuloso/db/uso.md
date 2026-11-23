@@ -372,7 +372,7 @@
 ### sales
 - select: services/data/dataLoaders.ts:44, services/dataContext.tsx:737
 - select [edge]: supabase/functions/_shared/care/repository.ts:117, supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:156, supabase/functions/warranty-public/index.ts:229
-- update: pages/Warranties.tsx:533, pages/Warranties.tsx:563
+- update: pages/Warranties.tsx:536, pages/Warranties.tsx:566
 - telas: /warranties
 
 ### sellers
@@ -555,13 +555,13 @@
 - `send-reservation-whatsapp`: utils/sendReservationWhatsApp.ts:41 · telas: /inventory
 - `user-account-delete`: pages/Settings.tsx:722, pages/Settings.tsx:751, pages/crm/SettingsPage.tsx:322, pages/crm/SettingsPage.tsx:353 · telas: /crm/settings, /settings
 - `user-data-export`: pages/Settings.tsx:685, pages/crm/SettingsPage.tsx:275 · telas: /crm/settings, /settings
-- `warranty-link-create`: pages/Warranties.tsx:223 · telas: /warranties
+- `warranty-link-create`: pages/Warranties.tsx:226 · telas: /warranties
 - `warranty-public`: pages/PublicWarranty.tsx:58 · telas: /warranties/:cpf, /warranty/:token
 
 ## Storage (4)
 - bucket `admin-agent-reports` (uso): supabase/functions/_shared/admin_agent/reports.ts:209
 - bucket `crm-media` (upload, getPublicUrl): pages/crm/ConversationsPage.tsx:1087, pages/crm/ConversationsPage.tsx:1091, pages/crm/ConversationsPage.tsx:845, pages/crm/ConversationsPage.tsx:847
-- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:273, pages/PayableDebts.tsx:300, pages/PayableDebts.tsx:312, pages/PayableDebts.tsx:322
+- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:274, pages/PayableDebts.tsx:304, pages/PayableDebts.tsx:316, pages/PayableDebts.tsx:326
 - bucket `receipts` (upload, createSignedUrl): supabase/functions/send-receipt-whatsapp/index.ts:133, supabase/functions/send-receipt-whatsapp/index.ts:142
 
 ## Realtime (28)

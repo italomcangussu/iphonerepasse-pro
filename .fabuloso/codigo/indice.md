@@ -192,7 +192,7 @@ _nenhum_
 - Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:289) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:161) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:372) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:536) chama sales; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:130) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:73) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço

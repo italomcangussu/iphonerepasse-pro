@@ -133,3 +133,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: auditar campos sem máscara; dinheiro com centavos em Dívidas Ativas e no Simulador, telefone na reserva e no roteiro de marketing.
 - Contexto: `CLAUDE.md` (1 linha de índice) + novo `conhecimento/mascaras.md`. Mapas regenerados.
 - Banco: nada (sem migration nem edge function).
+
+## 2026-11-23 — Busca de aparelho por termos
+- Modo: tarefa. Orquestrador: Sonnet 5.5. Commits 93288ad e o seguinte (placeholder).
+- Tarefa: `utils/productSearch.ts` busca por termos (geração, capacidade, variante, cor PT/EN, IMEI) em Estoque, Em uso, Garantias, PDV e Orçamentos.
+- Contexto: `CLAUDE.md` (Conventions, 1 linha). Mapas regenerados.
+- Banco: nada (sem migration nem edge function).

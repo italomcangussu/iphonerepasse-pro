@@ -21,6 +21,6 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| edge warranty-link-create | — | pages/Warranties.tsx:223 |
+| edge warranty-link-create | — | pages/Warranties.tsx:226 |
 | tabela app_user_activity_logs | insert | services/telemetry.ts:72 |
-| tabela sales | update | pages/Warranties.tsx:533, pages/Warranties.tsx:563 |
+| tabela sales | update | pages/Warranties.tsx:536, pages/Warranties.tsx:566 |

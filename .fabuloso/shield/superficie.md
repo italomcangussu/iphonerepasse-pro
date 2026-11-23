@@ -53,7 +53,7 @@ Gerado por `shield.mjs superficie`. Tudo o que recebe dado do usuário e a defes
 | campo de texto | pages/Inventory.tsx:902 | 1 campo(s), 1 sem limite | nenhuma vista |
 | campo de texto | pages/Login.tsx:75 | 2 campo(s), 2 sem limite | nenhuma vista |
 | campo de texto | pages/PartsStock.tsx:256 | 2 campo(s), 2 sem limite | nenhuma vista |
-| campo de texto | pages/PayableDebts.tsx:424 | 10 campo(s), 9 sem limite | nenhuma vista |
+| campo de texto | pages/PayableDebts.tsx:428 | 10 campo(s), 9 sem limite | nenhuma vista |
 | campo de texto | pages/PDV.tsx:1995 | 9 campo(s), 9 sem limite | nenhuma vista |
 | campo de texto | pages/pdv/quote/QuoteControls.tsx:18 | 1 campo(s), 1 sem limite | nenhuma vista |
 | campo de texto | pages/pdv/quote/QuoteCustomerCard.tsx:50 | 3 campo(s), 3 sem limite | nenhuma vista |
@@ -64,7 +64,7 @@ Gerado por `shield.mjs superficie`. Tudo o que recebe dado do usuário e a defes
 | campo de texto | pages/Sellers.tsx:231 | 3 campo(s), 3 sem limite | nenhuma vista |
 | campo de texto | pages/Settings.tsx:1161 | 11 campo(s), 10 sem limite | nenhuma vista |
 | campo de texto | pages/Stores.tsx:138 | 2 campo(s), 2 sem limite | nenhuma vista |
-| campo de texto | pages/Warranties.tsx:622 | 20 campo(s), 14 sem limite | nenhuma vista |
+| campo de texto | pages/Warranties.tsx:625 | 20 campo(s), 14 sem limite | nenhuma vista |
 | edge function | supabase/functions/admin-manage-user/index.ts:499 | admin-manage-user | autenticação |
 | edge function | supabase/functions/admin-provision-user/index.ts:186 | admin-provision-user | autenticação |
 | edge function | supabase/functions/care-contract/index.ts:1 | care-contract | limite de corpo, autenticação |
@@ -99,7 +99,7 @@ Gerado por `shield.mjs superficie`. Tudo o que recebe dado do usuário e a defes
 | upload | components/stock-form/StockVideoSection.tsx:100 | components/stock-form/StockVideoSection.tsx | limite de tamanho ou tipo |
 | upload | components/StockFormModal.tsx:1778 | components/StockFormModal.tsx | limite de tamanho ou tipo |
 | upload | pages/crm/ConversationsPage.tsx:845 | pages/crm/ConversationsPage.tsx | limite de tamanho ou tipo |
-| upload | pages/PayableDebts.tsx:868 | pages/PayableDebts.tsx | limite de tamanho ou tipo |
+| upload | pages/PayableDebts.tsx:882 | pages/PayableDebts.tsx | limite de tamanho ou tipo |
 | upload | pages/Profile.tsx:163 | pages/Profile.tsx | limite de tamanho ou tipo |
 | upload | supabase/functions/_shared/care/repository.ts:159 | supabase/functions/_shared/care/repository.ts | nenhuma vista |
 | upload | supabase/functions/crm-audio-transcribe/index.ts:42 | supabase/functions/crm-audio-transcribe/index.ts | limite de tamanho ou tipo |
