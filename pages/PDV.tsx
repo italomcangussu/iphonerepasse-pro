@@ -2052,7 +2052,7 @@ const PDV: React.FC = () => {
                     <Combobox
                       label="Produto"
                       placeholder="Buscar Produto..."
-                      searchPlaceholder="Digite modelo, IMEI/Serial ou cor..."
+                      searchPlaceholder="Ex.: 13 256 azul, ou o IMEI/Serial"
                       value={selectedProduct?.id || ''}
                       onChange={handleSelectProduct}
                       options={productOptions}

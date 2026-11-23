@@ -176,7 +176,7 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
       await user.click(screen.getByRole('button', { name: /2\. Produtos/i }));
     }
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'iPhone');
     await user.click(screen.getByText(/iPhone 14 Test/));
     await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
   };

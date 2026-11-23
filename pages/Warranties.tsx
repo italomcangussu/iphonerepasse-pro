@@ -29,6 +29,7 @@ import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
 import { Combobox } from '../components/ui/Combobox';
 import { newId } from '../utils/id';
+import { matchesProductSearch } from '../utils/productSearch';
 import { formatCpfOrCnpj, formatDateTimeBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 
 type WarrantyForm = {
@@ -181,7 +182,9 @@ const Warranties: React.FC = () => {
 
         const matchesSearch =
           customer?.name.toLowerCase().includes(searchString) ||
-          sale.items.some((item) => item.model.toLowerCase().includes(searchString) || item.imei.toLowerCase().includes(searchString));
+          sale.items.some((item) =>
+            matchesProductSearch(item.model, [item.capacity, item.color, item.imei].filter(Boolean).join(' '), searchTerm)
+          );
 
         const { isExpired } = getWarrantyStatus(sale.date, sale.warrantyExpiresAt);
 
@@ -621,7 +624,7 @@ const Warranties: React.FC = () => {
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
         <input
           type="text"
-          placeholder="Buscar por cliente, modelo ou IMEI/Serial..."
+          placeholder="Cliente, modelo, GB, cor ou IMEI"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="ios-input pl-10"

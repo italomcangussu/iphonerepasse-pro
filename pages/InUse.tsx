@@ -11,6 +11,7 @@ import { Condition, StockItem, StockStatus } from '../types';
 import { trackUxEvent } from '../services/telemetry';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
+import { filterStockItemsByProductSearch } from '../utils/productSearch';
 
 const InUse: React.FC = () => {
   const {
@@ -30,14 +31,13 @@ const InUse: React.FC = () => {
   const [isReturning, setIsReturning] = useState(false);
 
   const inUseItems = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return stock
-      .filter((item) => item.status === StockStatus.IN_USE)
-      .filter((item) => {
-        if (!q) return true;
-        return item.model.toLowerCase().includes(q) || (item.imei || '').toLowerCase().includes(q);
-      })
-      .sort((a, b) => (b.entryDate || '').localeCompare(a.entryDate || ''));
+    return filterStockItemsByProductSearch<StockItem>(
+      stock.filter((item) => item.status === StockStatus.IN_USE),
+      searchTerm,
+      (item) => item.model,
+      (item) => [item.capacity, item.color, item.imei].filter(Boolean).join(' '),
+      (a, b) => (b.entryDate || '').localeCompare(a.entryDate || '')
+    );
   }, [stock, searchTerm]);
 
   const inUseStats = useMemo(() => {
@@ -114,7 +114,7 @@ const InUse: React.FC = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
           <input
             type="text"
-            placeholder="Buscar por modelo ou IMEI/Serial..."
+            placeholder="Modelo, GB, cor ou IMEI (ex.: 13 256 azul)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"

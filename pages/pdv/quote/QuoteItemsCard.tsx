@@ -56,7 +56,7 @@ export function QuoteItemsCard({ stock, items, issues, showIssues, onAddStock, o
           label="Adicionar do estoque"
           ariaLabel="Adicionar do estoque"
           placeholder="Buscar modelo, cor, IMEI…"
-          searchPlaceholder="Digite o modelo, cor ou IMEI"
+          searchPlaceholder="Ex.: 13 256 azul, ou o IMEI"
           value=""
           options={options}
           filterOptions={filterProductSearchOptions}

@@ -96,7 +96,7 @@ export const selectInventoryRows = ({
     filteredByFacets,
     search,
     (item) => item.model,
-    (item) => item.imei || '',
+    (item) => [item.capacity, item.color, item.imei].filter(Boolean).join(' '),
     compareStockItemsForDisplay
   );
 };

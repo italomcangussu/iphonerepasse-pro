@@ -902,7 +902,7 @@ const Inventory: React.FC = () => {
             <input
               type="search"
               aria-label="Buscar no estoque"
-              placeholder="Buscar por modelo ou IMEI/Serial..."
+              placeholder="Modelo, GB, cor ou IMEI (ex.: 13 256 azul)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"

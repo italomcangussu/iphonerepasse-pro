@@ -108,15 +108,15 @@ describe('PDV page integration', () => {
       await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     }
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'iPhone');
     await user.click(screen.getByText(/iPhone 14 Test/));
     await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
   };
 
   const addProductToCart = async (user: ReturnType<typeof userEvent.setup>, query: string, optionText: RegExp) => {
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.clear(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), query);
+    await user.clear(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'));
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), query);
     await user.click(screen.getByText(optionText));
     await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
   };
@@ -724,7 +724,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
     await user.click(screen.getByRole('button', { name: '2. Produtos' }));
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'iPhone');
     await user.click(screen.getByText(/iPhone 14 Test/));
     await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
 
@@ -828,7 +828,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
     await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), '13');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), '13');
 
     const optionLabels = screen.getAllByRole('option').map((option) => option.textContent || '');
 
@@ -1180,10 +1180,10 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
 
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'i');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'i');
     expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
 
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'phone');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'phone');
     expect(screen.getByText('iPhone 14 Test 256 GB')).toBeInTheDocument();
   });
 
@@ -1421,7 +1421,7 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
 
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
-    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou o IMEI/Serial'), 'iPhone');
 
     expect(screen.getByText('iPhone Sobral 256 GB')).toBeInTheDocument();
     expect(screen.queryByText('iPhone Centro 128 GB')).not.toBeInTheDocument();
