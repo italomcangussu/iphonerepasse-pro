@@ -8891,7 +8891,7 @@
       "tipo": "r",
       "rls": true,
       "rls_forcado": false,
-      "linhas_est": "0",
+      "linhas_est": "<100",
       "opcoes": null,
       "comentario": null,
       "acesso": {
@@ -18905,7 +18905,7 @@
       "tipo": "r",
       "rls": true,
       "rls_forcado": false,
-      "linhas_est": "<100",
+      "linhas_est": "<1k",
       "opcoes": null,
       "comentario": null,
       "acesso": {
@@ -27032,7 +27032,7 @@
       "tipo": "r",
       "rls": true,
       "rls_forcado": false,
-      "linhas_est": "0",
+      "linhas_est": "<100",
       "opcoes": null,
       "comentario": null,
       "acesso": {

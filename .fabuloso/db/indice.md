@@ -1,5 +1,5 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-11-11 16:28 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash b9bc6c2a01fd
+> Gerado por `fabuloso.mjs db` em 2026-11-23 14:47 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 157733f4d652
 > Última migração aplicada no remoto: 20261111120000 · última local no mapa: 20261111120000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
@@ -51,7 +51,7 @@
 | crm_ai_agent_invocations | <100 | id | crm_ai_agent_configs, stores, tenants | on | S1 I1 A1 | 2 | siud/siud |
 | crm_ai_entry_settings | <100 | id | stores, tenants | on | A2 | 2 | siud/siud |
 | crm_attendance_scripts | 0 | id | stores, tenants | on | A2 | 3 | siud/siud |
-| crm_auth_handoffs | 0 | id | — | on | A1 | — | siud/siud |
+| crm_auth_handoffs | <100 | id | — | on | A1 | — | siud/siud |
 | crm_automation_rules | 0 | id | crm_channels, stores, tenants | on | A2 | 3 | siud/siud |
 | crm_broadcast_recipients | 0 | id | crm_broadcasts, crm_channels, crm_conversations, crm_leads, tenants | on | A2 | 2 | siud/siud |
 | crm_broadcasts | 0 | id | crm_channels, stores, tenants | on | A2 | 3 | siud/siud |
@@ -84,7 +84,7 @@
 | crm_webhook_subscriptions | 0 | id | tenants | on | A2 | 3 | siud/siud |
 | customers | <1k | id | tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |
 | debt_payments | <1k | id | debts, tenants | on | S1 I1 U1 D1 A1 | 4 | siud/siud |
-| debts | <100 | id | customers, sales, tenants | on | S1 I1 U1 D1 A1 | 5 | siud/siud |
+| debts | <1k | id | customers, sales, tenants | on | S1 I1 U1 D1 A1 | 5 | siud/siud |
 | device_catalog | <100 | id | auth.users | on | S1 I1 U1 D1 | 1 | siud/siud |
 | finance_categories | <100 | id | tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |
 | lead_state | <100 | lead_id | crm_leads, tenants | on | S1 I1 U1 A1 | 3 | siud/siud |
@@ -108,7 +108,7 @@
 | tenant_transfers | 0 | id | tenants, auth.users | on | S1 | — | siud/siud |
 | tenants | 0 | id | auth.users | on | S1 | — | siud/siud |
 | transactions | <10k | id | debt_payments, payable_debt_payments, sellers, sales, tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |
-| user_access_roles | 0 | user_id | auth.users | on | S2 I1 U1 D1 | 2 | siud/siud |
+| user_access_roles | <100 | user_id | auth.users | on | S2 I1 U1 D1 | 2 | siud/siud |
 | user_consents | <100 | id | auth.users | on | S1 I1 U1 | — | ·/siu |
 | user_profiles | <100 | id | tenants, auth.users, sellers | on | S1 I1 U1 D1 | 1 | siud/siud |
 | warranty_public_tokens | 0 | id | auth.users, sales, tenants | on | S1 I1 U1 D1 A1 | 2 | siud/siud |
