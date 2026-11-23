@@ -131,8 +131,9 @@ const ScriptsTab: React.FC = () => {
 
         <div className="w-full sm:w-64 min-w-0">
           <input
-            type="text"
+            type="search"
             className="ios-input text-ios-subhead"
+            aria-label="Buscar roteiros por palavra-chave"
             placeholder="Buscar por palavras-chave..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

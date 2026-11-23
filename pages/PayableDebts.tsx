@@ -16,6 +16,7 @@ import {
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
 import { formatCpfOrCnpj, formatCurrencyBRL, formatDateTimeBRL, formatDecimalBRL, formatPhone, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
+import { toFriendlyErrorMessage } from '../utils/friendlyError';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
@@ -273,7 +274,10 @@ const PayableDebts: React.FC = () => {
         const { error: uploadError } = await supabase.storage
           .from('payable-debt-receipts')
           .upload(path, selectedFile, { contentType: selectedFile.type, upsert: false });
-        if (uploadError) throw new Error(`Erro ao enviar comprovante: ${uploadError.message}`);
+        if (uploadError) {
+          toast.error(toFriendlyErrorMessage(uploadError, 'Não foi possível enviar o comprovante. Tente de novo.'));
+          return;
+        }
         attachmentPath = path;
         attachmentMime = selectedFile.type;
         attachmentName = selectedFile.name;
@@ -295,11 +299,11 @@ const PayableDebts: React.FC = () => {
       closePaymentModal();
       setSelectedDebt(null);
       setSelectedFile(null);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (attachmentPath) {
         await supabase.storage.from('payable-debt-receipts').remove([attachmentPath]).catch(() => {});
       }
-      toast.error(e?.message || 'Não foi possível registrar o pagamento.');
+      toast.error(toFriendlyErrorMessage(e, 'Não foi possível registrar o pagamento.'));
     } finally {
       setIsPayingDebt(false);
     }
@@ -422,8 +426,9 @@ const PayableDebts: React.FC = () => {
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
           <input
-            type="text"
+            type="search"
             className="ios-input pl-10"
+            aria-label="Buscar dívidas por credor ou observação"
             placeholder="Buscar por credor ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

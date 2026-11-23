@@ -518,6 +518,7 @@ const SimulatorPage: React.FC = () => {
             >
               R$
             </span>
+            {/* design-ok so-placeholder: rótulo visível "Valor final recebido" via htmlFor */}
             <input
               id={valueInputId}
               className="crm-input pl-10"
@@ -1060,6 +1061,7 @@ const SimulatorPage: React.FC = () => {
                       <span className="pointer-events-none select-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
                         R$
                       </span>
+                      {/* design-ok so-placeholder: o <label> envolve o campo com "Valor da entrada" */}
                       <input
                         className="crm-input pl-10"
                         inputMode="decimal"
