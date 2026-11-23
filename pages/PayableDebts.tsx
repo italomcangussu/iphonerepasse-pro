@@ -842,29 +842,38 @@ const PayableDebts: React.FC = () => {
 
             <div>
               <label className="ios-label">Comprovante (opcional)</label>
-              <div
-                className="border-2 border-dashed border-gray-300 dark:border-surface-dark-300 rounded-ios p-4 text-center cursor-pointer hover:border-brand-400 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {selectedFile ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Paperclip size={16} className="text-brand-500 shrink-0" />
-                      <span className="text-sm text-gray-900 dark:text-white truncate">{selectedFile.name}</span>
-                      <span className="text-xs text-gray-500">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                    </div>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="shrink-0 p-1 hover:bg-gray-100 rounded">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <Paperclip size={20} className="text-gray-400" />
-                    <p className="text-sm text-gray-500">Clique para anexar comprovante</p>
-                    <p className="text-xs text-gray-400">JPG, PNG, WEBP ou PDF · máx 10 MB</p>
-                  </div>
-                )}
-              </div>
+              {selectedFile ? (
+                <div className="flex items-center justify-between gap-2 border-2 border-dashed border-gray-300 dark:border-surface-dark-300 rounded-ios pl-4 pr-1 py-1">
+                  <button
+                    type="button"
+                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label={`Trocar comprovante ${selectedFile.name}`}
+                  >
+                    <Paperclip size={16} className="text-brand-500 shrink-0" />
+                    <span className="text-sm text-gray-900 dark:text-white truncate">{selectedFile.name}</span>
+                    <span className="text-xs text-gray-500">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="shrink-0 inline-flex min-h-11 min-w-11 items-center justify-center rounded-ios hover:bg-gray-100 dark:hover:bg-surface-dark-200"
+                    aria-label="Remover comprovante"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="w-full border-2 border-dashed border-gray-300 dark:border-surface-dark-300 rounded-ios p-4 text-center hover:border-brand-400 transition-colors flex flex-col items-center gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip size={20} className="text-gray-400" />
+                  <span className="text-sm text-gray-500">Clique para anexar comprovante</span>
+                  <span className="text-xs text-gray-400">JPG, PNG, WEBP ou PDF · máx 10 MB</span>
+                </button>
+              )}
               <input ref={fileInputRef} type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleFileChange} />
               {paymentErrors.file && <p className="text-xs text-red-600 mt-1">{paymentErrors.file}</p>}
             </div>

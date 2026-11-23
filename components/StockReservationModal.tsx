@@ -486,7 +486,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    className="ios-button-secondary h-9 px-3 text-xs"
+                    className="ios-button-secondary min-h-11 px-3 text-xs"
                     onClick={() => void handleSaveMessageTemplate()}
                     disabled={isSaving || isSavingTemplate}
                   >

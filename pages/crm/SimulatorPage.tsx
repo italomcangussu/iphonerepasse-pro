@@ -53,7 +53,7 @@ function IOSSwitch({
         aria-labelledby={id}
         onClick={() => onChange(!checked)}
         style={{ WebkitTapHighlightColor: 'transparent' }}
-        className={`relative inline-flex h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+        className={`relative inline-flex h-[31px] w-[51px] shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
           checked ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'
         }`}
       >
@@ -1100,7 +1100,7 @@ const SimulatorPage: React.FC = () => {
                             setEntries((current) => current.filter((_, i) => i !== index))
                           }
                           style={{ WebkitTapHighlightColor: 'transparent' }}
-                          className="flex items-center justify-center w-5 h-5 rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors"
+                          className="relative flex items-center justify-center w-5 h-5 rounded-full before:absolute before:-inset-3 before:content-[''] hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors"
                         >
                           <X size={12} aria-hidden="true" />
                         </button>
