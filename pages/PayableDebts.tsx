@@ -15,7 +15,7 @@ import {
   sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
-import { formatCurrencyBRL, formatDateTimeBRL, maskCurrencyInput } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateTimeBRL, formatDecimalBRL, formatPhone, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
@@ -156,7 +156,7 @@ const PayableDebts: React.FC = () => {
     setEditingDebt(debt);
     setDebtForm({
       creditorId: debt.creditorId,
-      amount: debt.originalAmount.toFixed(2),
+      amount: formatDecimalBRL(debt.originalAmount),
       account: debt.entryAccount || '',
       firstDueDate: debt.firstDueDate || debt.dueDate || '',
       installmentsTotal: String(debt.installmentsTotal || 1),
@@ -167,7 +167,7 @@ const PayableDebts: React.FC = () => {
   };
 
   const handleSaveDebt = async () => {
-    const amount = Number(debtForm.amount);
+    const amount = parseDecimalBRL(debtForm.amount);
     const errors: typeof debtErrors = {};
     if (!debtForm.creditorId) errors.creditorId = 'Selecione um credor.';
     if (!amount || amount <= 0) errors.amount = 'Informe um valor válido.';
@@ -225,7 +225,7 @@ const PayableDebts: React.FC = () => {
   const handleOpenPaymentModal = (debt: PayableDebt) => {
     setSelectedDebt(debt);
     setPaymentForm({
-      amount: debt.remainingAmount.toFixed(2),
+      amount: formatDecimalBRL(debt.remainingAmount),
       paymentMethod: 'Pix',
       account: 'Conta Bancária',
       notes: '',
@@ -255,7 +255,7 @@ const PayableDebts: React.FC = () => {
 
   const handlePayDebt = async () => {
     if (!selectedDebt) return;
-    const amount = Number(paymentForm.amount);
+    const amount = parseDecimalBRL(paymentForm.amount);
     const errors: typeof paymentErrors = {};
     if (!amount || amount <= 0) errors.amount = 'Informe um valor válido.';
     else if (!validatePayableDebtPaymentAmount(amount, selectedDebt.remainingAmount)) errors.amount = 'Valor não pode ser maior que o saldo.';
@@ -632,11 +632,11 @@ const PayableDebts: React.FC = () => {
             </div>
             <div>
               <label className="ios-label">Documento (opcional)</label>
-              <input type="text" className="ios-input" value={creditorForm.document} onChange={(e) => setCreditorForm((p) => ({ ...p, document: e.target.value }))} placeholder="000.000.000-00" />
+              <input type="text" inputMode="numeric" maxLength={18} className="ios-input" value={creditorForm.document} onChange={(e) => setCreditorForm((p) => ({ ...p, document: formatCpfOrCnpj(e.target.value) }))} placeholder={creditorForm.documentType === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'} />
             </div>
             <div>
               <label className="ios-label">Telefone (opcional)</label>
-              <input type="text" className="ios-input" value={creditorForm.phone} onChange={(e) => setCreditorForm((p) => ({ ...p, phone: e.target.value }))} placeholder="(00) 00000-0000" />
+              <input type="tel" inputMode="tel" className="ios-input" value={creditorForm.phone} onChange={(e) => setCreditorForm((p) => ({ ...p, phone: formatPhone(e.target.value) }))} placeholder="(00) 00000-0000" />
             </div>
             <div>
               <label className="ios-label">Email (opcional)</label>
@@ -711,11 +711,10 @@ const PayableDebts: React.FC = () => {
                 className={`ios-input ${debtErrors.amount ? 'border-red-500' : ''}`}
                 value={debtForm.amount}
                 onChange={(e) => {
-                  const masked = maskCurrencyInput(e.target.value, debtForm.amount);
-                  setDebtForm((p) => ({ ...p, amount: masked }));
+                  setDebtForm((p) => ({ ...p, amount: maskDecimalInput(e.target.value) }));
                   setDebtErrors((p) => ({ ...p, amount: undefined }));
                 }}
-                placeholder="0"
+                placeholder="0,00"
               />
               {debtErrors.amount && <p className="text-xs text-red-600 mt-1">{debtErrors.amount}</p>}
             </div>
@@ -807,11 +806,10 @@ const PayableDebts: React.FC = () => {
                   className={`ios-input ${paymentErrors.amount ? 'border-red-500' : ''}`}
                   value={paymentForm.amount}
                   onChange={(e) => {
-                    const masked = maskCurrencyInput(e.target.value, paymentForm.amount);
-                    setPaymentForm((p) => ({ ...p, amount: masked }));
+                    setPaymentForm((p) => ({ ...p, amount: maskDecimalInput(e.target.value) }));
                     setPaymentErrors((p) => ({ ...p, amount: undefined }));
                   }}
-                  placeholder="0"
+                  placeholder="0,00"
                 />
                 {paymentErrors.amount && <p className="text-xs text-red-600 mt-1">{paymentErrors.amount}</p>}
               </div>

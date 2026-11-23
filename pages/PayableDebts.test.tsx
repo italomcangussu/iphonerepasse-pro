@@ -146,7 +146,7 @@ describe('PayableDebts page', () => {
     const dialog = screen.getByRole('dialog');
 
     await user.selectOptions(within(dialog).getAllByRole('combobox')[0], 'cred-1');
-    fireEvent.change(within(dialog).getByPlaceholderText('0'), { target: { value: '250' } });
+    fireEvent.change(within(dialog).getByPlaceholderText('0,00'), { target: { value: '250,75' } });
     await user.selectOptions(within(dialog).getAllByRole('combobox')[1], 'Cofre');
     fireEvent.change(within(dialog).getByPlaceholderText('Descrição da dívida, condições, etc...'), {
       target: { value: 'Entrada temporária' }
@@ -157,7 +157,7 @@ describe('PayableDebts page', () => {
     await waitFor(() => {
       expect(addPayableDebtMock).toHaveBeenCalledWith({
         creditorId: 'cred-1',
-        amount: 250,
+        amount: 250.75,
         firstDueDate: undefined,
         dueDate: undefined,
         installmentsTotal: 1,
@@ -175,8 +175,9 @@ describe('PayableDebts page', () => {
     await user.click(screen.getByRole('button', { name: 'Pagar' }));
     const dialog = screen.getByRole('dialog');
 
-    const amountInput = within(dialog).getByPlaceholderText('0');
-    fireEvent.change(amountInput, { target: { value: '120' } });
+    const amountInput = within(dialog).getByPlaceholderText('0,00');
+    expect((amountInput as HTMLInputElement).value).toMatch(/^\d+,\d{2}$/);
+    fireEvent.change(amountInput, { target: { value: '120,5' } });
     await user.selectOptions(within(dialog).getAllByRole('combobox')[1], 'Cofre');
     fireEvent.change(within(dialog).getByPlaceholderText('Observação opcional'), {
       target: { value: 'Pagamento parcial' }
@@ -187,7 +188,7 @@ describe('PayableDebts page', () => {
     await waitFor(() => {
       expect(addPayableDebtPaymentMock).toHaveBeenCalledWith(expect.objectContaining({
         payableDebtId: 'pdbt-1',
-        amount: 120,
+        amount: 120.5,
         paymentMethod: 'Pix',
         account: 'Cofre',
         notes: 'Pagamento parcial'
