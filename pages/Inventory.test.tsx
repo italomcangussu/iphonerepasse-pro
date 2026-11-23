@@ -1115,7 +1115,7 @@ describe('Inventory table columns', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Inventory /></MemoryRouter>);
 
-    await user.type(screen.getByPlaceholderText('Modelo, GB, cor ou IMEI (ex.: 13 256 azul)'), 'inexistente');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou IMEI'), 'inexistente');
 
     expect(screen.getByText('Nenhum aparelho encontrado com os filtros atuais')).toBeInTheDocument();
     expect(screen.getByText('Ajuste filtros ou limpe a busca para visualizar mais itens.')).toBeInTheDocument();
@@ -1177,7 +1177,7 @@ describe('Inventory table columns', () => {
     });
     render(<MemoryRouter><Inventory /></MemoryRouter>);
 
-    await user.type(screen.getByPlaceholderText('Modelo, GB, cor ou IMEI (ex.: 13 256 azul)'), '13');
+    await user.type(screen.getByPlaceholderText('Ex.: 13 256 azul, ou IMEI'), '13');
 
     const table = screen.getByRole('table');
     const bodyRows = within(table).getAllByRole('row').slice(1);

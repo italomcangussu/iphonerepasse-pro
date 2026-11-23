@@ -114,7 +114,7 @@ const InUse: React.FC = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
           <input
             type="text"
-            placeholder="Modelo, GB, cor ou IMEI (ex.: 13 256 azul)"
+            placeholder="Ex.: 13 256 azul, ou IMEI"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
