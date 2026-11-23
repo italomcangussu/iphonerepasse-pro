@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { maskPhoneInput } from '../../utils/inputMasks';
 import {
   Sparkles,
   Copy,
@@ -90,10 +91,11 @@ const ScriptsTab: React.FC = () => {
               <Phone size={14} /> Telefone Destino (WhatsApp)
             </label>
             <input
-              type="text"
+              type="tel"
+              inputMode="tel"
               className="ios-input"
               value={targetPhone}
-              onChange={(e) => setTargetPhone(e.target.value)}
+              onChange={(e) => setTargetPhone(maskPhoneInput(e.target.value))}
               placeholder="Ex: (85) 99999-8888"
             />
           </div>

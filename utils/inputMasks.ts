@@ -41,6 +41,16 @@ export const formatPhone = (value: string): string => {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
+/**
+ * Máscara para digitação de telefone: formata DDD + número (até 11 dígitos)
+ * e deixa como está um número com DDI (+55…), que `formatPhone` truncaria.
+ */
+export const maskPhoneInput = (value: string): string => {
+  const digits = onlyDigits(value);
+  if (digits.length > 11 || value.trimStart().startsWith('+')) return value;
+  return formatPhone(value);
+};
+
 export const formatCnpj = (value: string): string => {
   const digits = onlyDigits(value).slice(0, 14);
 

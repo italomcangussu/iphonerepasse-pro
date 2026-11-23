@@ -3,7 +3,7 @@ import { AlertCircle, MessageCircle, Plus, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
-import { getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { getCpfOrCnpjLabel, maskPhoneInput } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
 import { toReservationCalendarDay } from '../utils/reservations';
 import {
@@ -349,10 +349,13 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             <label className="ios-label" htmlFor="reservation-customer-phone">Telefone</label>
             <input
               id="reservation-customer-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               className={`ios-input ${errors.phone ? 'ios-input-error' : ''}`}
               value={customerPhone}
               onChange={(event) => {
-                setCustomerPhone(event.target.value);
+                setCustomerPhone(maskPhoneInput(event.target.value));
                 setErrors((current) => ({ ...current, phone: undefined }));
               }}
               placeholder="WhatsApp ou contato"

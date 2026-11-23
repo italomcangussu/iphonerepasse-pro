@@ -8,6 +8,7 @@ import {
   formatPercentBRL,
   getCpfOrCnpjLabel,
   maskDecimalInput,
+  maskPhoneInput,
   maskSignedDecimalInput,
   parseDecimalBRL,
 } from './inputMasks';
@@ -25,6 +26,14 @@ describe('inputMasks', () => {
     expect(getCpfOrCnpjLabel('123.456.789-01')).toBe('CPF');
     expect(getCpfOrCnpjLabel('12.345.678/0001-95')).toBe('CNPJ');
     expect(getCpfOrCnpjLabel('')).toBe('CPF/CNPJ');
+  });
+
+  describe('maskPhoneInput', () => {
+    it('formats local numbers and keeps numbers with country code', () => {
+      expect(maskPhoneInput('85999998888')).toBe('(85) 99999-8888');
+      expect(maskPhoneInput('+55 85 99999-8888')).toBe('+55 85 99999-8888');
+      expect(maskPhoneInput('5585999998888')).toBe('5585999998888');
+    });
   });
 
   describe('maskSignedDecimalInput', () => {
