@@ -8,6 +8,7 @@ import {
   formatPercentBRL,
   getCpfOrCnpjLabel,
   maskDecimalInput,
+  maskSignedDecimalInput,
   parseDecimalBRL,
 } from './inputMasks';
 
@@ -24,6 +25,15 @@ describe('inputMasks', () => {
     expect(getCpfOrCnpjLabel('123.456.789-01')).toBe('CPF');
     expect(getCpfOrCnpjLabel('12.345.678/0001-95')).toBe('CNPJ');
     expect(getCpfOrCnpjLabel('')).toBe('CPF/CNPJ');
+  });
+
+  describe('maskSignedDecimalInput', () => {
+    it('keeps a leading sign and masks the rest', () => {
+      expect(maskSignedDecimalInput('-200.5')).toBe('-200,5');
+      expect(maskSignedDecimalInput('+100')).toBe('+100');
+      expect(maskSignedDecimalInput('-')).toBe('-');
+      expect(maskSignedDecimalInput('1-2')).toBe('12');
+    });
   });
 
   describe('maskDecimalInput', () => {

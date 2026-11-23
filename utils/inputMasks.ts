@@ -179,6 +179,16 @@ export const maskDecimalInput = (
 };
 
 /**
+ * Igual a `maskDecimalInput`, mas mantém um sinal "+" ou "-" no início
+ * (ajustes que somam ou descontam, ex.: "-200,50").
+ */
+export const maskSignedDecimalInput = (value: string, options: MaskDecimalOptions = {}): string => {
+  const trimmed = String(value ?? '').trimStart();
+  const sign = trimmed.startsWith('-') || trimmed.startsWith('+') ? trimmed[0] : '';
+  return `${sign}${maskDecimalInput(trimmed.slice(sign.length), options)}`;
+};
+
+/**
  * Converte string pt-BR ("1,87", "1.500,50", "150") em número com segurança.
  * Retorna 0 para entradas vazias ou corrompidas.
  */

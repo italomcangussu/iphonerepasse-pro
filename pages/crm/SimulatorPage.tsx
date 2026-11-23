@@ -7,6 +7,7 @@ import { useData } from '../../services/dataContext';
 import { useToast } from '../../components/ui/ToastProvider';
 import { StockStatus, type SimulatorTradeInValue, type StockItem } from '../../types';
 import { useTradeInDrafts, type TradeInDraftView } from '../../hooks/useTradeInDrafts';
+import { formatDecimalBRL, maskDecimalInput, maskSignedDecimalInput } from '../../utils/inputMasks';
 import {
   calculateSimulatorQuote,
   compareTradeInDevicesByFamily,
@@ -295,7 +296,7 @@ const SimulatorPage: React.FC = () => {
     setEditingBaseValue({
       model: item.model,
       capacity: item.capacity,
-      baseValue: String(item.baseValue),
+      baseValue: formatDecimalBRL(item.baseValue),
     });
   };
 
@@ -523,7 +524,7 @@ const SimulatorPage: React.FC = () => {
               inputMode="decimal"
               placeholder="0,00"
               value={view.valueInput}
-              onChange={(e) => tradeIns.setValue(view.id, e.target.value)}
+              onChange={(e) => tradeIns.setValue(view.id, maskDecimalInput(e.target.value))}
             />
           </div>
         </div>
@@ -635,11 +636,11 @@ const SimulatorPage: React.FC = () => {
                       <span className="crm-field-label">Valor base</span>
                       <input
                         className="crm-input"
-                        placeholder="3.000"
+                        placeholder="0,00"
                         inputMode="decimal"
                         value={newBaseValue.baseValue}
                         onChange={(e) =>
-                          setNewBaseValue((c) => ({ ...c, baseValue: e.target.value }))
+                          setNewBaseValue((c) => ({ ...c, baseValue: maskDecimalInput(e.target.value) }))
                         }
                       />
                     </label>
@@ -697,7 +698,7 @@ const SimulatorPage: React.FC = () => {
                                 onChange={(e) =>
                                   setEditingBaseValue((c) => ({
                                     ...c,
-                                    baseValue: e.target.value,
+                                    baseValue: maskDecimalInput(e.target.value),
                                   }))
                                 }
                               />
@@ -785,11 +786,11 @@ const SimulatorPage: React.FC = () => {
                       <span className="crm-field-label">Valor +/-</span>
                       <input
                         className="crm-input"
-                        placeholder="-200 ou +100"
+                        placeholder="-200,00 ou +100,00"
                         inputMode="decimal"
                         value={newAdjustment.amountDelta}
                         onChange={(e) =>
-                          setNewAdjustment((c) => ({ ...c, amountDelta: e.target.value }))
+                          setNewAdjustment((c) => ({ ...c, amountDelta: maskSignedDecimalInput(e.target.value) }))
                         }
                       />
                     </label>
@@ -964,9 +965,9 @@ const SimulatorPage: React.FC = () => {
                         <input
                           className="crm-input"
                           inputMode="decimal"
-                          placeholder="5.000"
+                          placeholder="0,00"
                           value={manualDevicePrice}
-                          onChange={(e) => setManualDevicePrice(e.target.value)}
+                          onChange={(e) => setManualDevicePrice(maskDecimalInput(e.target.value))}
                         />
                       </label>
                     </div>
@@ -1064,7 +1065,7 @@ const SimulatorPage: React.FC = () => {
                         inputMode="decimal"
                         placeholder="0,00"
                         value={entryAmount}
-                        onChange={(e) => setEntryAmount(e.target.value)}
+                        onChange={(e) => setEntryAmount(maskDecimalInput(e.target.value))}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') addEntry();
                         }}
@@ -1199,7 +1200,7 @@ const SimulatorPage: React.FC = () => {
                           placeholder="0,00"
                           value={splitCardOne.amount}
                           onChange={(e) =>
-                            setSplitCardOne((c) => ({ ...c, amount: e.target.value }))
+                            setSplitCardOne((c) => ({ ...c, amount: maskDecimalInput(e.target.value) }))
                           }
                         />
                       </label>
@@ -1231,7 +1232,7 @@ const SimulatorPage: React.FC = () => {
                           placeholder="0,00"
                           value={splitCardTwo.amount}
                           onChange={(e) =>
-                            setSplitCardTwo((c) => ({ ...c, amount: e.target.value }))
+                            setSplitCardTwo((c) => ({ ...c, amount: maskDecimalInput(e.target.value) }))
                           }
                         />
                       </label>
