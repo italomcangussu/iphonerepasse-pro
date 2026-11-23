@@ -126,3 +126,4 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Banco: migration `20261111120000_stock_item_videos` aplicada no remoto; nenhuma edge function.
 
 - 2026-11-23 · bootstrap parcial (capacidades): +fabuloso-qa, fabuloso-shield, eval-genius nos gatilhos; skills Swift/Xcode, review-agent e evolver em "Outras"; plugin-creator removida. Pendências em aberto: 0.
+- 2026-11-23 · arquitetura.md enxugada (11,6 KB): fluxos de multiempresa e reservas movidos para conhecimento/<área>.md (Fluxos). Pendências em aberto: 0.

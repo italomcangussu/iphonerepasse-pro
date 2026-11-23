@@ -13,3 +13,7 @@ Leia antes de mexer em `components/StockReservationModal.tsx`, `components/reser
 - Teste PGlite: `supabase/tests/pglite/reservation_deposit_parts.sql`.
 - Pendência conhecida: o `cancel_transaction` mais recente (`20260911113452`) perdeu os bloqueios para lançamentos de venda e de sinal de reserva.
 - Botão Simulador em `pages/Inventory.tsx` abre `StockSimulatorModal` (escolha do aparelho).
+
+## Fluxos
+- Reserva de estoque: tela (`/inventory`) → `StockReservationModal` (`components/reservation/ReservationPaymentFields`, vários sinais + troca) → `useData().reserveStockItem` → RPC `reserve_stock_item` → `stock_reservations` + `transactions` (um IN por sinal) → edge `send-reservation-whatsapp` → mensagem ao cliente
+- Liberar reserva com devolução: tela (`/inventory`) → RPC `release_stock_reservation` → um OUT 'Estorno de reserva' por sinal em `transactions`

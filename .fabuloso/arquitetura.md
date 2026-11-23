@@ -26,7 +26,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 | `types.ts` | tipos de domínio do ERP (63 dependentes) | `types.ts` | `--relates types.ts` |
 | `design-system/seroclub-iphonerepasse` | tokens, motion e tema; CSS global em `index.css` | `index.css` | — |
 | `supabase/functions` | uma edge function por pasta (`index.ts`); código comum em `_shared/` | `_shared/crm.ts` (32 dependentes) | `ls supabase/functions` |
-| `supabase/migrations` | 145 migrations ordenadas = fonte da verdade do schema | — | `.fabuloso/db/indice.md` |
+| `supabase/migrations` | migrations ordenadas = fonte da verdade do schema | — | `.fabuloso/db/indice.md` |
 | `scripts/n8n`, `n8n/ia-repasse-pro-v2` | patches cirúrgicos, guard, ferramenta de decomposição do workflow Bia | `scripts/n8n/tool/patch-kit.mjs` | ver CLAUDE.md |
 | `tests/` | contratos transversais (migrations, PWA, layout iOS, realtime) | — | `--affected <arquivo>` |
 | `docs/`, `tasks/`, `ralph/` | planos/specs, PRDs em PT-BR, listas do loop Ralph | — | — |
@@ -47,18 +47,14 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Orçamento PDV: tela (`/pdv/orcamentos/novo`, `pages/PDVQuoteNew`) → `useQuoteDraft` (`computeQuoteTotals`) → `QuoteValidityDialog` → `services/quotesApi.createQuote` → `pdv_quotes` → `QuoteDocumentViewer` (HTML em iframe) → baixar/enviar/PDF; lista em `/pdv/orcamentos`
 - Extrato por tipo: tela (`/finance`, `pages/Finance.tsx`) → `useData().transactions` → `useAccountStatement` → `summarizeByCategory` → `AccountTab`/`CategoryBreakdownCard`/`TransactionStatement`; filtro → `matchesCategoryFilter` → extrato e cards
 - Pagamento de pessoal: tela (`/finance`, `pages/Finance.tsx`) → `useTransactionEditor` + `TransactionFormModal` (select Funcionário = `sellers`) → `useData().addTransaction` → `transactions.payee_seller_id` → extrato/CSV/detalhe mostram o nome (`resolvePayeeName`)
-- Reserva de estoque: tela (`/inventory`) → `StockReservationModal` (`components/reservation/ReservationPaymentFields`, vários sinais + troca) → `useData().reserveStockItem` → RPC `reserve_stock_item` → `stock_reservations` + `transactions` (um IN por sinal) → edge `send-reservation-whatsapp` → mensagem ao cliente
-- Liberar reserva com devolução: tela (`/inventory`) → RPC `release_stock_reservation` → um OUT 'Estorno de reserva' por sinal em `transactions`
+- Reserva e liberação de estoque: `/inventory` → `StockReservationModal` → RPC `reserve_stock_item` / `release_stock_reservation` → `stock_reservations` + `transactions`. Detalhe: `conhecimento/reservas.md` (Fluxos)
 - Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
 - Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`
 - Agente financeiro admin: WhatsApp do canal `is_admin_console` → `crm-uaz-webhook-receiver` → `crm-admin-agent` → `admin_agent_pending_actions` (SIM/NÃO) → RPCs `admin_agent_*` → `admin_agent_audit_log`
 - Repasse Care+: PDV/histórico (botão "Repasse Care+") → `CareContractModal` → RPC `care_quote_for_sale_item`/`care_create_contract` → edge `care-contract` (PDF + sessão + link por `crm-send-message`) → página pública `/care/assinar/:token` → edge `care-sign-public` (OTP uazapi) → `care_sign_session` → `/care` receber parcela → `care_confirm_installment_payment` → `transactions` + `care_try_activate`
 - Suspensão Care+: pg_cron / aba `/care` → RPC `care_refresh_suspensions` → `care_contracts.status=suspenso` + evento `contrato_suspenso`; `/care?contrato=id` → `SuspensionSection` → RPC `care_reactivate_after_inspection` → `care_contract_inspections` + evento `contrato_reativado`
 - Permissão de ação: Configurações > Permissões por função → `app_role_permissions` → `PermissionsContext.can()` (telas) + `has_app_permission()` nas políticas/RPCs (banco)
-- Trocar empresa: Layout → `TenantSwitcher` → `AuthContext.switchTenant` → RPC `set_active_tenant` → recarga dos dados
-- Criar empresa: `/settings/companies` (`pages/Companies.tsx`) → `CompanyNameModal` → RPC `create_tenant` → `CompanyMembersModal` → RPC `tenant_add_member`
-- Transferir entre empresas: `/settings/companies` → `TransferSection` → `StoreTransferPanel` (RPC `transfer_store_to_tenant`) | `StockTransferPanel` → `useTransferableStock` (RPC `tenant_transferable_stock`) → RPC `transfer_stock_items` (opcional venda: `SaleOptions`/`useStockSale`; lança IN/OUT entre empresas)
-- Liberar funcionários: `/settings/companies` → `CompanyMembersModal` → `SharedMembersSection` (`useShareableMembers` → RPC `tenant_shareable_members`) → `shareTenantMembers` → RPC `tenant_share_members` → `private.mirror_primary_membership`; gatilho `propagate_primary_membership` em `tenant_members` mantém o papel e a saída em dia
+- Multiempresa (trocar, criar, transferir, liberar funcionários): `TenantSwitcher` e `/settings/companies` → `services/tenants.ts` → RPCs `tenant_*`/`transfer_*`. Detalhe: `conhecimento/multiempresa.md` (Fluxos)
 - Vídeos do aparelho: `/inventory` → `StockFormModal` (aba Condição) → `StockVideoSection` → `useStockVideoUploads` → `services/storage.uploadDeviceVideo` → bucket `device-videos` → `useData().addStockItem`/`updateStockItem` → `stock_items.videos`
 - Compartilhar aparelho: `StockDetailsModal` → `utils/stockShareMedia` (`selectShareMediaUrls`, `usePreparedShareFiles`) → `navigator.share` com fotos + vídeos | wa.me + download
 

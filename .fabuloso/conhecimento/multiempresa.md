@@ -34,3 +34,9 @@ Leia antes de mexer em `tenant_id`, políticas RLS, `AuthContext`/`TenantSwitche
 - Front: seção "Funcionários da iPhone Repasse" em `components/companies/SharedMembersSection.tsx` (hook `useShareableMembers`), dentro do `CompanyMembersModal`; só aparece para quem pode criar empresas e em empresa não principal. `MemberRow` mostra "segue a iPhone Repasse".
 - Armadilha nos testes PGlite: linhas de `sellers` de outra empresa são invisíveis por RLS ao usuário cuja empresa ativa é a principal; conferir como `fab.dono()`.
 - Entrega: migration aplicada com `npx supabase db push --linked` (o `.env.local` não tem URL direta do banco; o MCP `apply_migration` não tem permissão).
+
+## Fluxos
+- Trocar empresa: Layout → `TenantSwitcher` → `AuthContext.switchTenant` → RPC `set_active_tenant` → recarga dos dados
+- Criar empresa: `/settings/companies` (`pages/Companies.tsx`) → `CompanyNameModal` → RPC `create_tenant` → `CompanyMembersModal` → RPC `tenant_add_member`
+- Transferir entre empresas: `/settings/companies` → `TransferSection` → `StoreTransferPanel` (RPC `transfer_store_to_tenant`) | `StockTransferPanel` → `useTransferableStock` (RPC `tenant_transferable_stock`) → RPC `transfer_stock_items` (opcional venda: `SaleOptions`/`useStockSale`; lança IN/OUT entre empresas)
+- Liberar funcionários: `/settings/companies` → `CompanyMembersModal` → `SharedMembersSection` (`useShareableMembers` → RPC `tenant_shareable_members`) → `shareTenantMembers` → RPC `tenant_share_members` → `private.mirror_primary_membership`; gatilho `propagate_primary_membership` em `tenant_members` mantém o papel e a saída em dia
