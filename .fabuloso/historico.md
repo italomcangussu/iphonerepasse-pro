@@ -127,3 +127,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 
 - 2026-11-23 · bootstrap parcial (capacidades): +fabuloso-qa, fabuloso-shield, eval-genius nos gatilhos; skills Swift/Xcode, review-agent e evolver em "Outras"; plugin-creator removida. Pendências em aberto: 0.
 - 2026-11-23 · arquitetura.md enxugada (11,6 KB): fluxos de multiempresa e reservas movidos para conhecimento/<área>.md (Fluxos). Pendências em aberto: 0.
+
+## 2026-11-23 — Máscaras corretas nos campos de valor e telefone
+- Modo: tarefa. Orquestrador: Sonnet 5.5. Commits 8bf0ac1, 24c4300, 97938a4.
+- Tarefa: auditar campos sem máscara; dinheiro com centavos em Dívidas Ativas e no Simulador, telefone na reserva e no roteiro de marketing.
+- Contexto: `CLAUDE.md` (1 linha de índice) + novo `conhecimento/mascaras.md`. Mapas regenerados.
+- Banco: nada (sem migration nem edge function).
